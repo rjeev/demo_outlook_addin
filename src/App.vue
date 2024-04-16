@@ -10,10 +10,11 @@
 
         <div class="content" v-if="subject">
           <div><b>Subject:</b> {{ subject }}</div>
-          <div><b>Sender:</b> {{ sender }}</div>
-
+          <div><b>Sender Email:</b> {{ senderEmail }} </div>
+          <div><b>Sender Name:</b> {{ senderName }} </div>
+          <div><b>Body:</b><span v-html="body"></span></div>
         </div>
-        <button class="myBtn" @click="handleClick">Run</button>
+        <button class="myBtn" v-if="!subject" @click="handleClick">Run</button>
       </div>
     </div>
   </div>
@@ -26,15 +27,24 @@ export default {
   data() {
     return {
       subject: '',
-      sender: '',
+      senderEmail: '',
+      senderName: '',
+      body: '',
 
     }
   },
   methods: {
     handleClick() {
       this.subject = window.Office.context.mailbox.item.subject;
-      this.sender = window.Office.context.mailbox.item.from;
-
+      this.senderEmail = window.Office.context.mailbox.item.from.emailAddress;
+      this.senderName = window.Office.context.mailbox.item.from.displayName;
+      window.Office.context.mailbox.item.body.getAsync(window.Office.CoercionType.Html, (bodyResult) => {
+        if (bodyResult.status === window.Office.AsyncResultStatus.Succeeded) {
+          this.body = bodyResult.value;
+        } else {
+          console.log(bodyResult.error.message);
+        }
+      });
     }
   }
 };
