@@ -5,6 +5,12 @@
 npm install
 ```
 
+## Generate cert for local host
+```
+npx office-addin-dev-certs install
+
+```
+
 ### Compiles and hot-reloads for development
 ```
 npm run serve
