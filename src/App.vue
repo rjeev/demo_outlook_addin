@@ -8,17 +8,28 @@
       </div>
       <div class="content-main">
         <div class="email-content" v-if="subject">
-          <div><b>Subject:</b> {{ subject }}</div>
-          <div><b>Sender Email:</b> {{ senderEmail }}</div>
-          <div><b>Sender Name:</b> {{ senderName }}</div>
+          <div>
+            <p class="title"><b>Subject:</b></p>
+            {{ subject }}
+          </div>
+          <div>
+            <p class="title"><b>Sender Email:</b></p>
+            {{ senderEmail }}
+          </div>
+          <div>
+            <p class="title"><b>Sender Name:</b></p>
+            {{ senderName }}
+          </div>
           <div v-if="ccRecipients.length > 0">
-            <b>CC Recipients:</b> {{ formatRecipients(ccRecipients) }}
+            <p class="title"><b>CC Recipients:</b></p>
+            {{ formatRecipients(ccRecipients) }}
           </div>
           <div v-if="bccRecipients.length > 0">
-            <b>BCC Recipients:</b> {{ formatRecipients(bccRecipients) }}
+            <p class="title"><b>BCC Recipients:</b></p>
+            {{ formatRecipients(bccRecipients) }}
           </div>
           <div v-if="attachments.length > 0">
-            <div><b>Attachments:</b></div>
+            <p class="title"><b>Attachments:</b></p>
             <div v-for="(attachment, index) in attachments" :key="index">
               <a :href="attachment.url" :download="attachment.name">{{
                 attachment.name
@@ -232,5 +243,8 @@ export default {
 .email-body {
   width: 100%;
   overflow: auto;
+}
+.title {
+  margin: 0 0 5px;
 }
 </style>
