@@ -97,9 +97,6 @@ export default {
         this.fetching = false;
       }
     },
-    handleLogEmail() {
-      console.log(this.emailItem);
-    },
     async fetchAttachments(attachments) {
       await Promise.all(
         attachments.map(async (attachment) => {
@@ -158,6 +155,51 @@ export default {
             recipient.displayName || recipient.emailAddress || "Unknown"
         )
         .join(", ");
+    },
+    handleLogEmail() {
+      const emailData = {
+        subject: this.subject,
+        senderEmail: this.senderEmail,
+        senderName: this.senderName,
+        ccRecipients: this.ccRecipients.map(
+          (recipient) => recipient.emailAddress
+        ),
+        bccRecipients: this.bccRecipients.map(
+          (recipient) => recipient.emailAddress
+        ),
+        body: this.body,
+      };
+
+      fetch("http://localhost:3009/emails", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(emailData),
+      })
+        .then((response) => {
+          if (response.ok) {
+            console.log("Email data successfully logged.");
+            this.resetState();
+          } else {
+            throw new Error("Failed to log email data.");
+          }
+        })
+        .catch((error) => {
+          console.error("Error logging email data:", error);
+        });
+    },
+    resetState() {
+      this.subject = "";
+      this.senderEmail = "";
+      this.senderName = "";
+      this.body = "";
+      this.ccRecipients = [];
+      this.bccRecipients = [];
+      this.attachments = [];
+      this.error = null;
+      this.fetching = false;
+      this.emailItem = null;
     },
   },
 };
