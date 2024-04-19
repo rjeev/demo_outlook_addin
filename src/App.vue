@@ -11,15 +11,19 @@
           <div><b>Subject:</b> {{ subject }}</div>
           <div><b>Sender Email:</b> {{ senderEmail }}</div>
           <div><b>Sender Name:</b> {{ senderName }}</div>
-          <div><b>CC Recipients:</b> {{ formatRecipients(ccRecipients) }}</div>
-          <div>
+          <div v-if="ccRecipients.length > 0">
+            <b>CC Recipients:</b> {{ formatRecipients(ccRecipients) }}
+          </div>
+          <div v-if="bccRecipients.length > 0">
             <b>BCC Recipients:</b> {{ formatRecipients(bccRecipients) }}
           </div>
-          <div><b>Attachments:</b></div>
-          <div v-for="(attachment, index) in attachments" :key="index">
-            <a :href="attachment.url" :download="attachment.name">{{
-              attachment.name
-            }}</a>
+          <div v-if="attachments.length > 0">
+            <div><b>Attachments:</b></div>
+            <div v-for="(attachment, index) in attachments" :key="index">
+              <a :href="attachment.url" :download="attachment.name">{{
+                attachment.name
+              }}</a>
+            </div>
           </div>
           <div><b>Body:</b><span v-html="body"></span></div>
         </div>
@@ -176,8 +180,8 @@ export default {
   margin-bottom: 20px;
 }
 
-.email-content div {
-  margin-bottom: 8px;
+.email-content > div {
+  margin-bottom: 20px;
 }
 
 .email-content div b {
