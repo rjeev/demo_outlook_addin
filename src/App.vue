@@ -26,6 +26,9 @@
             </div>
           </div>
           <div><b>Body:</b><span v-html="body"></span></div>
+          <div>
+            <button class="myBtn" @click="handleLogEmail">Log mail</button>
+          </div>
         </div>
         <button
           class="myBtn"
@@ -55,6 +58,7 @@ export default {
       attachments: [],
       error: null,
       fetching: false,
+      emailItem: null,
     };
   },
   methods: {
@@ -63,6 +67,7 @@ export default {
       this.fetching = true;
       try {
         const item = window.Office.context.mailbox.item;
+        this.emailItem = item;
         this.subject = item.subject;
         this.senderEmail = item.from.emailAddress;
         this.senderName = item.from.displayName;
@@ -76,6 +81,9 @@ export default {
       } finally {
         this.fetching = false;
       }
+    },
+    handleLogEmail() {
+      console.log(this.emailItem);
     },
     async fetchAttachments(attachments) {
       await Promise.all(
@@ -141,7 +149,6 @@ export default {
 </script>
 
 <style>
-/* CSS Variables */
 :root {
   --primary-color: #2a8dd4;
   --secondary-color: #fff;
@@ -151,7 +158,6 @@ export default {
   --button-disabled-color: #ccc;
 }
 
-/* Updated CSS styles */
 #app {
   font-family: Arial, sans-serif;
 }
