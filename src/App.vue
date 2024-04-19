@@ -25,7 +25,11 @@
               }}</a>
             </div>
           </div>
-          <div><b>Body:</b><span v-html="body"></span></div>
+          <div>
+            <b>Body:</b>
+            <div class="spacer">&nbsp;</div>
+            <div v-html="body" class="email-body"></div>
+          </div>
           <div>
             <button class="myBtn" @click="handleLogEmail">Log mail</button>
           </div>
@@ -224,5 +228,9 @@ export default {
   color: var(--accent-color);
   margin-top: 10px;
   text-align: center;
+}
+.email-body {
+  width: 100%;
+  overflow: auto;
 }
 </style>
