@@ -22,11 +22,25 @@
           </div>
           <div v-if="ccRecipients.length > 0">
             <p class="title"><b>CC Recipients:</b></p>
-            {{ formatRecipients(ccRecipients) }}
+            <span
+              v-for="(recipient, index) in ccRecipients"
+              :key="index"
+              @click="fetchPersonalData(recipient.emailAddress)"
+              class="clickable"
+            >
+              {{ recipient.emailAddress }}
+            </span>
           </div>
           <div v-if="bccRecipients.length > 0">
             <p class="title"><b>BCC Recipients:</b></p>
-            {{ formatRecipients(bccRecipients) }}
+            <span
+              v-for="(recipient, index) in bccRecipients"
+              :key="index"
+              @click="fetchPersonalData(recipient.emailAddress)"
+              class="clickable"
+            >
+              {{ recipient.emailAddress }}
+            </span>
           </div>
           <div v-if="attachments.length > 0">
             <p class="title"><b>Attachments:</b></p>
@@ -56,6 +70,26 @@
         <div v-if="error" class="error">{{ error }}</div>
       </div>
     </div>
+
+    <!-- Popup to display personal data -->
+    <div v-if="popupVisible" class="popup">
+      <div class="popup-content">
+        <span class="close" @click="hidePopup">&times;</span>
+        <h2 v-if="personalData">{{ personalData.name }}</h2>
+        <div v-if="personalData">
+          <img
+            :src="personalData.photo"
+            alt="Profile Photo"
+            class="profile-image"
+          />
+          <p><b>Email:</b> {{ personalData.email }}</p>
+          <p><b>Designation:</b> {{ personalData.designation }}</p>
+        </div>
+        <div v-else>
+          <p>No data available.</p>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -74,6 +108,8 @@ export default {
       error: null,
       fetching: false,
       emailItem: null,
+      popupVisible: false,
+      personalData: null,
     };
   },
   methods: {
@@ -94,6 +130,7 @@ export default {
         console.error("Error fetching email data:", error);
         this.error = "Error fetching email data. Please try again.";
       } finally {
+        console.log(this.emailItem, "item");
         this.fetching = false;
       }
     },
@@ -188,6 +225,26 @@ export default {
         .catch((error) => {
           console.error("Error logging email data:", error);
         });
+    },
+    async fetchPersonalData(email) {
+      try {
+        const response = await fetch(
+          `http://localhost:3009/personal-data/${email}`
+        );
+        if (!response.ok) {
+          throw new Error("Failed to fetch personal data.");
+        }
+        const data = await response.json();
+        this.personalData = data;
+        this.popupVisible = true;
+      } catch (error) {
+        console.error("Error fetching personal data:", error);
+        this.personalData = null;
+        this.popupVisible = true; // Show the popup even if no data is available
+      }
+    },
+    hidePopup() {
+      this.popupVisible = false;
     },
     resetState() {
       this.subject = "";
@@ -288,5 +345,48 @@ export default {
 }
 .title {
   margin: 0 0 5px;
+}
+
+.popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: rgba(255, 255, 255, 0.9);
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  z-index: 9999;
+}
+
+.popup-content {
+  max-width: 300px;
+  text-align: center;
+  position: relative;
+}
+
+.close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  cursor: pointer;
+  transform: translate3d(16px, -34px, 10px);
+}
+
+.profile-image {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  margin: 0 auto 10px;
+}
+
+.clickable {
+  cursor: pointer;
+  color: blue;
+  text-decoration: underline;
+}
+
+.clickable:hover {
+  color: darkblue;
 }
 </style>

@@ -59,6 +59,30 @@ app.post("/emails", async (req, res) => {
   }
 });
 
+app.get("/personal-data/:email", async (req, res) => {
+  const { email } = req.params;
+
+  try {
+    const client = await pool.connect();
+    const queryText = "SELECT * FROM persona WHERE email = $1";
+    const { rows } = await client.query(queryText, [email]);
+    client.release();
+
+    if (rows.length === 0) {
+      // If no data found for the provided email, send a 404 Not Found response
+      return res
+        .status(404)
+        .send("Personal data not found for the provided email.");
+    }
+
+    // Send the personal data as a JSON response
+    res.status(200).json(rows[0]);
+  } catch (error) {
+    console.error("Error fetching personal data:", error);
+    res.status(500).send(`Internal Server Error: ${error.message}`);
+  }
+});
+
 app.listen(port, () => {
   console.log(`Server is listening at http://localhost:${port}`);
 });
