@@ -110,6 +110,7 @@ export default {
       emailItem: null,
       popupVisible: false,
       personalData: null,
+      accessToken: null,
     };
   },
   methods: {
@@ -124,13 +125,29 @@ export default {
         this.senderName = item.from.displayName;
         this.ccRecipients = item.cc || [];
         this.bccRecipients = item.bcc || [];
+        const that = this;
+        window.Office.context.mailbox.getCallbackTokenAsync(
+          { isRest: true },
+          function (result) {
+            if (result.status === window.Office.AsyncResultStatus.Succeeded) {
+              that.accessToken = result.value;
+              console.log(that.accessToken, "accessToken");
+              // Use the token to authenticate with the remote service
+            } else {
+              console.error(
+                "Failed to retrieve callback token:",
+                result.error.message
+              );
+            }
+          }
+        );
         await this.fetchAttachments(item.attachments);
         await this.fetchEmailBody();
       } catch (error) {
         console.error("Error fetching email data:", error);
         this.error = "Error fetching email data. Please try again.";
       } finally {
-        console.log(this.emailItem, "item");
+        // console.log(this.emailItem, "item");
         this.fetching = false;
       }
     },
