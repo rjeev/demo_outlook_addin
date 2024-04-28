@@ -4,6 +4,7 @@
       <div class="content-header">
         <div class="padding">
           <h1>Welcome</h1>
+          <button class="myBtn" @click="signIn">Sign In</button>
         </div>
       </div>
       <div class="content-main">
@@ -67,6 +68,9 @@
         >
           {{ fetching ? "Fetching..." : "Run" }}
         </button>
+        <div>
+          <button @click="sendEmail">send</button>
+        </div>
         <div v-if="error" class="error">{{ error }}</div>
       </div>
     </div>
@@ -94,6 +98,12 @@
 </template>
 
 <script>
+import {
+  PublicClientApplication,
+  InteractionRequiredAuthError,
+} from "@azure/msal-browser";
+// import { loginRequest } from "./auth";
+
 export default {
   name: "App",
   data() {
@@ -110,10 +120,103 @@ export default {
       emailItem: null,
       popupVisible: false,
       personalData: null,
-      accessToken: null,
+      accessToken: null, // Add the accessToken property
+      msalInstance: null, // Add the msalInstance property
+      isMsalInitialized: false,
+      account: null,
     };
   },
+  created() {
+    this.initializeMsal();
+  },
+  watch: {
+    account() {
+      console.log(this.account, "this.account");
+    },
+  },
   methods: {
+    async initializeMsal() {
+      try {
+        const msalConfig = {
+          auth: {
+            clientId: "1fc8ba62-a619-4fef-9721-5b95665f7fb8",
+            authority:
+              "https://login.microsoftonline.com/e6e4cf59-274e-4cfd-98cc-ef09b26da341",
+            redirectUri: "https://localhost:3000", // Replace with your redirect URI
+          },
+          system: {
+            allowNativeBroker: true,
+          },
+        };
+
+        const msalInstance = new PublicClientApplication(msalConfig);
+        await msalInstance.initialize();
+        console.log("MSAL initialized successfully");
+        console.log(msalInstance, "instasnce");
+        this.isMsalInitialized = true;
+        this.msalInstance = msalInstance;
+        this.msalInstance.handleRedirectPromise();
+        const that = this;
+        await this.msalInstance
+          .loginPopup({
+            scopes: ["User.ReadWrite"],
+          })
+          .then(function (loginResponse) {
+            console.log(loginResponse);
+
+            that.account = loginResponse.account;
+            // accountId = loginResponse.account.homeAccountId;
+            // Display signed-in user content, call API, etc.
+          })
+          .catch(function (error) {
+            //login failure
+            console.log(error);
+          });
+      } catch (error) {
+        console.error("MSAL initialization error:", error);
+      }
+    },
+    async signIn() {
+      // Check if MSAL instance is fully initialized before attempting sign-in
+      if (!this.isMsalInitialized) {
+        console.error("MSAL instance is not initialized");
+        return;
+      }
+      const that = this;
+      try {
+        console.log(that.account, "account");
+        var request = {
+          scopes: ["User.Read"],
+          account: that.account,
+        };
+        this.msalInstance
+          .acquireTokenSilent(request)
+          .then((tokenResponse) => {
+            // Do something with the tokenResponse
+            console.log(tokenResponse, "tokenResponse");
+            this.accessToken = tokenResponse.accessToken;
+          })
+          .catch(async (error) => {
+            console.log(error);
+            if (error instanceof InteractionRequiredAuthError) {
+              // Fallback to interactive token acquisition if silent call fails
+              return this.msalInstance.acquireTokenPopup(request);
+            } else if (error.message.includes("interaction_in_progress")) {
+              console.error(
+                "An authentication interaction is already in progress."
+              );
+              // Inform the user that an authentication interaction is in progress
+              // Optionally, you can prevent additional sign-in attempts until the current interaction is completed
+            } else {
+              // Handle other errors
+              console.error("Sign-in error:", error);
+            }
+          });
+      } catch (error) {
+        console.error("Sign-in error:", error);
+      }
+    },
+
     async fetchEmailData() {
       this.error = null;
       this.fetching = true;
@@ -244,6 +347,7 @@ export default {
         });
     },
     async fetchPersonalData(email) {
+      // Fetch personal data method with error handling
       try {
         const response = await fetch(
           `http://localhost:3009/personal-data/${email}`
@@ -257,13 +361,15 @@ export default {
       } catch (error) {
         console.error("Error fetching personal data:", error);
         this.personalData = null;
-        this.popupVisible = true; // Show the popup even if no data is available
+        this.popupVisible = false; // Hide the popup if an error occurs
       }
     },
     hidePopup() {
+      // Hide popup method
       this.popupVisible = false;
     },
     resetState() {
+      // Reset state method
       this.subject = "";
       this.senderEmail = "";
       this.senderName = "";
@@ -274,6 +380,80 @@ export default {
       this.error = null;
       this.fetching = false;
       this.emailItem = null;
+      this.accessToken = null; // Clear the access token
+    },
+    async sendEmail() {
+      try {
+        const accessToken = this.accessToken; // Assuming you have obtained the access token
+        const apiUrl = "https://graph.microsoft.com/v1.0/me/sendMail";
+
+        const emailData = {
+          message: {
+            subject: "Subject of the email",
+            body: {
+              contentType: "HTML",
+              content: "Body of the email",
+            },
+            toRecipients: [
+              {
+                emailAddress: {
+                  address: "9841pratik@gmail.com",
+                },
+              },
+            ],
+          },
+        };
+
+        const response = await fetch(apiUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${this.accessToken}`,
+          },
+          body: JSON.stringify(emailData),
+        });
+
+        if (response.ok) {
+          console.log("Email sent successfully.");
+        } else {
+          console.error("Failed to send email:", response.statusText);
+        }
+      } catch (error) {
+        console.error("Error sending email:", error);
+      }
+    },
+
+    async bookAppointment() {
+      try {
+        const item = window.Office.context.calendar.getAppointmentForm();
+        item.start.setHours(9, 0, 0, 0);
+        item.end.setHours(10, 0, 0, 0);
+        item.subject = "Appointment Subject";
+        item.location = "Appointment Location";
+        item.requiredAttendees.addEmailAddress("recipient@example.com");
+        item.saveAsync((result) => {
+          if (result.error) {
+            console.error("Error booking appointment:", result.error);
+          } else {
+            console.log("Appointment booked successfully.");
+          }
+        });
+      } catch (error) {
+        console.error("Error booking appointment:", error);
+      }
+    },
+    async sendEmailOrBookAppointment() {
+      try {
+        const isEmail = true; // Change to false for booking an appointment
+
+        if (isEmail) {
+          await this.sendEmail();
+        } else {
+          await this.bookAppointment();
+        }
+      } catch (error) {
+        console.error("Error sending email or booking appointment:", error);
+      }
     },
   },
 };
