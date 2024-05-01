@@ -70,6 +70,7 @@
         </button>
         <div>
           <button @click="sendEmail">send</button>
+          <button class="myBtn" @click="assignEvent">Assign Event</button>
         </div>
         <div v-if="error" class="error">{{ error }}</div>
       </div>
@@ -129,20 +130,14 @@ export default {
   created() {
     this.initializeMsal();
   },
-  watch: {
-    account() {
-      console.log(this.account, "this.account");
-    },
-  },
   methods: {
     async initializeMsal() {
       try {
         const msalConfig = {
           auth: {
-            clientId: "1fc8ba62-a619-4fef-9721-5b95665f7fb8",
-            authority:
-              "https://login.microsoftonline.com/e6e4cf59-274e-4cfd-98cc-ef09b26da341",
-            redirectUri: "https://localhost:3000", // Replace with your redirect URI
+            clientId: "6821c268-c82f-46be-a889-dc170861f0d8",
+            authority: "https://login.microsoftonline.com/common",
+            redirectUri: "https://localhost:3000",
           },
           system: {
             allowNativeBroker: true,
@@ -151,22 +146,47 @@ export default {
 
         const msalInstance = new PublicClientApplication(msalConfig);
         await msalInstance.initialize();
-        console.log("MSAL initialized successfully");
-        console.log(msalInstance, "instasnce");
         this.isMsalInitialized = true;
         this.msalInstance = msalInstance;
         this.msalInstance.handleRedirectPromise();
         const that = this;
+
         await this.msalInstance
           .loginPopup({
-            scopes: ["User.ReadWrite"],
+            scopes: [
+              "AuditLog.Read.All",
+              "Calendars.Read",
+              "Calendars.Read.Shared",
+              "Calendars.ReadBasic",
+              "Calendars.ReadWrite",
+              "Calendars.ReadWrite.Shared",
+              "Directory.Read.All",
+              "email",
+              "Mail.Read",
+              "Mail.Read.Shared",
+              "Mail.ReadBasic",
+              "Mail.ReadBasic.Shared",
+              "Mail.ReadWrite",
+              "Mail.ReadWrite.Shared",
+              "Mail.Send",
+              "Mail.Send.Shared",
+              "MailboxSettings.Read",
+              "MailboxSettings.ReadWrite",
+              "openid",
+              "profile",
+              "SecurityEvents.Read.All",
+              "SecurityEvents.ReadWrite.All",
+              "User.Read",
+              "User.ReadWrite",
+            ],
           })
           .then(function (loginResponse) {
-            console.log(loginResponse);
-
+            console.log(loginResponse, "LoginResponse");
+            that.accessToken = loginResponse.accessToken;
             that.account = loginResponse.account;
             // accountId = loginResponse.account.homeAccountId;
             // Display signed-in user content, call API, etc.
+            // that.signIn();
           })
           .catch(function (error) {
             //login failure
@@ -184,9 +204,33 @@ export default {
       }
       const that = this;
       try {
-        console.log(that.account, "account");
         var request = {
-          scopes: ["User.Read"],
+          scopes: [
+            "AuditLog.Read.All",
+            "Calendars.Read",
+            "Calendars.Read.Shared",
+            "Calendars.ReadBasic",
+            "Calendars.ReadWrite",
+            "Calendars.ReadWrite.Shared",
+            "Directory.Read.All",
+            "email",
+            "Mail.Read",
+            "Mail.Read.Shared",
+            "Mail.ReadBasic",
+            "Mail.ReadBasic.Shared",
+            "Mail.ReadWrite",
+            "Mail.ReadWrite.Shared",
+            "Mail.Send",
+            "Mail.Send.Shared",
+            "MailboxSettings.Read",
+            "MailboxSettings.ReadWrite",
+            "openid",
+            "profile",
+            "SecurityEvents.Read.All",
+            "SecurityEvents.ReadWrite.All",
+            "User.Read",
+            "User.ReadWrite",
+          ],
           account: that.account,
         };
         this.msalInstance
@@ -216,7 +260,91 @@ export default {
         console.error("Sign-in error:", error);
       }
     },
+    async sendEmail() {
+      try {
+        const accessToken = this.accessToken; // Assuming you have obtained the access token
+        // console.log(accessToken, "this.accessToken");
+        const apiUrl = "https://graph.microsoft.com/v1.0/me/sendMail";
 
+        const emailData = {
+          message: {
+            subject: "Subject of the email",
+            body: {
+              contentType: "HTML",
+              content: "Body of the email",
+            },
+            toRecipients: [
+              {
+                emailAddress: {
+                  address: "9841pratik@gmail.com",
+                },
+              },
+            ],
+          },
+        };
+
+        const response = await fetch(apiUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify(emailData),
+        });
+
+        if (response.ok) {
+          console.log("Email sent successfully.");
+        } else {
+          console.error("Failed to send email:", response.statusText);
+        }
+      } catch (error) {
+        console.error("Error sending email:", error);
+      }
+    },
+    async assignEvent() {
+      try {
+        // Microsoft Graph API endpoint to create an event in the calendar
+        const apiUrl = "https://graph.microsoft.com/v1.0/me/events";
+
+        // Data for the event
+        const eventData = {
+          subject: "Meeting with Client 1",
+          start: {
+            dateTime: "2024-05-03T10:00:00",
+            timeZone: "Pacific Standard Time",
+          },
+          end: {
+            dateTime: "2024-05-06T11:00:00",
+            timeZone: "Pacific Standard Time",
+          },
+          location: {
+            displayName: "Conference Room",
+          },
+          body: {
+            content: "Discuss project progress.",
+            contentType: "text",
+          },
+        };
+
+        // Make a POST request to create the event
+        const response = await fetch(apiUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${this.accessToken}`, // Assuming you have obtained the access token
+          },
+          body: JSON.stringify(eventData),
+        });
+
+        if (response.ok) {
+          console.log("Event added to Outlook calendar.");
+        } else {
+          console.error("Failed to add event:", response.statusText);
+        }
+      } catch (error) {
+        console.error("Error assigning event:", error);
+      }
+    },
     async fetchEmailData() {
       this.error = null;
       this.fetching = true;
@@ -381,46 +509,6 @@ export default {
       this.fetching = false;
       this.emailItem = null;
       this.accessToken = null; // Clear the access token
-    },
-    async sendEmail() {
-      try {
-        const accessToken = this.accessToken; // Assuming you have obtained the access token
-        const apiUrl = "https://graph.microsoft.com/v1.0/me/sendMail";
-
-        const emailData = {
-          message: {
-            subject: "Subject of the email",
-            body: {
-              contentType: "HTML",
-              content: "Body of the email",
-            },
-            toRecipients: [
-              {
-                emailAddress: {
-                  address: "9841pratik@gmail.com",
-                },
-              },
-            ],
-          },
-        };
-
-        const response = await fetch(apiUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${this.accessToken}`,
-          },
-          body: JSON.stringify(emailData),
-        });
-
-        if (response.ok) {
-          console.log("Email sent successfully.");
-        } else {
-          console.error("Failed to send email:", response.statusText);
-        }
-      } catch (error) {
-        console.error("Error sending email:", error);
-      }
     },
 
     async bookAppointment() {
