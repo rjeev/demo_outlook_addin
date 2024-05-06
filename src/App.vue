@@ -1,15 +1,28 @@
 <template>
   <div id="app">
-    <div class="loader" v-if="accessToken === null"></div>
+    <div class="loader" v-if="!isLoaded"></div>
 
     <div class="content" v-else>
       <div class="content-header">
         <div class="padding">
-          <h1>Welcome</h1>
-          <p>{{ account.name }}</p>
+          <img
+            :src="accountData?.photo"
+            v-if="accountData !== null"
+            class="avatar"
+          />
+          <p>{{ account.name }},&nbsp;{{ accountData?.designation }}</p>
         </div>
       </div>
       <div class="content-main">
+        <!-- addon actions -->
+        <div class="actions">
+          <button class="myBtn" @click="fetchEmailData" :disabled="fetching">
+            {{ fetching ? "Fetching..." : "Parse Email" }}
+          </button>
+          <button class="myBtn" @click="sendEmail">send</button>
+          <button class="myBtn" @click="assignEvent">Assign Event</button>
+        </div>
+        <!-- prsed email contents -->
         <div class="email-content" v-if="subject">
           <div>
             <p class="title"><b>Subject:</b></p>
@@ -62,17 +75,33 @@
             <button class="myBtn" @click="handleLogEmail">Log mail</button>
           </div>
         </div>
-        <button
-          class="myBtn"
-          v-else
-          @click="fetchEmailData"
-          :disabled="fetching"
-        >
-          {{ fetching ? "Fetching..." : "Run" }}
-        </button>
-        <div>
-          <button @click="sendEmail">send</button>
-          <button class="myBtn" @click="assignEvent">Assign Event</button>
+        <!-- Appointment form -->
+        <div v-if="!isEventCreateMode">
+          <input
+            type="date"
+            placeholder="Start time"
+            @input="updateEventDay($event.target.value)"
+            :value="eventDay"
+          />
+          <input
+            type="time"
+            name="Start time"
+            id="startTime"
+            placeholder="Start Time"
+            @input="updateEventStartTime($event.target.value)"
+            :value="eventStartTime"
+          />
+          <input
+            type="time"
+            name="End time"
+            placeholder="End Time"
+            @input="updateEventEndTime($event.target.value)"
+            :value="eventEndTime"
+          />
+
+          {{ eventDay }}
+          {{ eventStartTime }}
+          {{ eventEndTime }}
         </div>
         <div v-if="error" class="error">{{ error }}</div>
       </div>
@@ -106,13 +135,11 @@ import {
   InteractionRequiredAuthError,
 } from "@azure/msal-browser";
 
-// import LoadingSVG from "./assets/loading.svg";
-
 export default {
   name: "App",
-  // components: { LoadingSVG },
   data() {
     return {
+      isLoaded: false,
       subject: "",
       senderEmail: "",
       senderName: "",
@@ -129,20 +156,24 @@ export default {
       msalInstance: null,
       isMsalInitialized: false,
       account: null,
+      accountData: null,
+      eventDay: null,
+      eventStartTime: null,
+      eventEndTime: null,
+      isEventCreateMode: false,
     };
   },
   created() {
     this.initializeMsal();
-    console.log(this.msalInstance);
   },
   methods: {
+    createAppointment() {},
     async initializeMsal() {
       try {
         const msalConfig = {
           auth: {
             clientId: "6821c268-c82f-46be-a889-dc170861f0d8",
-            authority:
-              "https://login.microsoftonline.com/8cd7b528-f691-4489-b951-fe0d110d54a6",
+            authority: "https://login.microsoftonline.com/common",
             redirectUri: "https://localhost:3000",
           },
           system: {
@@ -162,15 +193,12 @@ export default {
             scopes: ["User.ReadWrite"],
           })
           .then(function (loginResponse) {
-            console.log(loginResponse, "LoginResponse");
             that.accessToken = loginResponse.accessToken;
             that.account = loginResponse.account;
-            // accountId = loginResponse.account.homeAccountId;
-            // Display signed-in user content, call API, etc.
-            // that.signIn();
+            that.fetchPersonalAvatar(that.account.username);
+            that.isLoaded = true;
           })
           .catch(function (error) {
-            //login failure
             console.log(error);
           });
       } catch (error) {
@@ -178,7 +206,6 @@ export default {
       }
     },
     async signIn() {
-      // Check if MSAL instance is fully initialized before attempting sign-in
       if (!this.isMsalInitialized) {
         console.error("MSAL instance is not initialized");
         return;
@@ -243,8 +270,7 @@ export default {
     },
     async sendEmail() {
       try {
-        const accessToken = this.accessToken; // Assuming you have obtained the access token
-        // console.log(accessToken, "this.accessToken");
+        const accessToken = this.accessToken;
         const apiUrl = "https://graph.microsoft.com/v1.0/me/sendMail";
 
         const emailData = {
@@ -283,20 +309,63 @@ export default {
       }
     },
     async assignEvent() {
+      console.log(this.bccRecipients, "bcc");
+      console.log(this.ccRecipients, "Cc");
+      console.log(this.senderEmail, "senderEmail");
+      const that = this;
       try {
-        // Microsoft Graph API endpoint to create an event in the calendar
         const apiUrl = "https://graph.microsoft.com/v1.0/me/events";
 
-        // Data for the event
+        const formatDate = (date) => {
+          // Pad single digits with leading zero
+          return date < 10 ? "0" + date : date;
+        };
+
+        const formatDateTime = (date, time) => {
+          const [hour, minute] = time.split(":");
+          const formattedHour = hour.padStart(2, "0"); // Ensure hour has two digits
+          const formattedMinute = minute.padStart(2, "0"); // Ensure minute has two digits
+          return `${date.getFullYear()}-${formatDate(
+            date.getMonth() + 1
+          )}-${formatDate(
+            date.getDate()
+          )}T${formattedHour}:${formattedMinute}:00`;
+        };
+
+        // Construct start and end dateTime
+        const startDateTime = formatDateTime(
+          new Date(this.eventDay),
+          this.eventStartTime
+        );
+        const endDateTime = formatDateTime(
+          new Date(this.eventDay),
+          this.eventEndTime
+        );
+
+        const allAttendees = [
+          { emailAddress: { address: that.senderEmail }, type: "required" },
+          ...that.bccRecipients.map((recipient) => ({
+            emailAddress: { address: recipient.emailAddress },
+            type: "bcc",
+          })),
+          ...that.ccRecipients.map((recipient) => ({
+            emailAddress: { address: recipient.emailAddress },
+            type: "cc",
+          })),
+        ];
+        const currentTimezone =
+          Intl.DateTimeFormat().resolvedOptions().timeZone;
+        console.log(allAttendees, "allAttendees");
+        console.log(currentTimezone);
         const eventData = {
-          subject: "Meeting with Client 1",
+          subject: "Meeting with Recipients",
           start: {
-            dateTime: "2024-05-03T10:00:00",
-            timeZone: "Pacific Standard Time",
+            dateTime: startDateTime,
+            timeZone: currentTimezone,
           },
           end: {
-            dateTime: "2024-05-06T11:00:00",
-            timeZone: "Pacific Standard Time",
+            dateTime: endDateTime,
+            timeZone: currentTimezone,
           },
           location: {
             displayName: "Conference Room",
@@ -305,14 +374,19 @@ export default {
             content: "Discuss project progress.",
             contentType: "text",
           },
+          attendees: allAttendees.map((attendee) => ({
+            emailAddress: {
+              address: attendee.emailAddress.address,
+            },
+            type: "Required",
+          })),
         };
 
-        // Make a POST request to create the event
         const response = await fetch(apiUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${this.accessToken}`, // Assuming you have obtained the access token
+            Authorization: `Bearer ${this.accessToken}`,
           },
           body: JSON.stringify(eventData),
         });
@@ -337,31 +411,24 @@ export default {
         this.senderName = item.from.displayName;
         this.ccRecipients = item.cc || [];
         this.bccRecipients = item.bcc || [];
-        const that = this;
-        window.Office.context.mailbox.getCallbackTokenAsync(
-          { isRest: true },
-          function (result) {
-            if (result.status === window.Office.AsyncResultStatus.Succeeded) {
-              that.accessToken = result.value;
-              console.log(that.accessToken, "accessToken");
-              // Use the token to authenticate with the remote service
-            } else {
-              console.error(
-                "Failed to retrieve callback token:",
-                result.error.message
-              );
-            }
-          }
-        );
+
         await this.fetchAttachments(item.attachments);
         await this.fetchEmailBody();
       } catch (error) {
         console.error("Error fetching email data:", error);
         this.error = "Error fetching email data. Please try again.";
       } finally {
-        // console.log(this.emailItem, "item");
         this.fetching = false;
       }
+    },
+    updateEventDay(value) {
+      this.eventDay = value;
+    },
+    updateEventStartTime(value) {
+      this.eventStartTime = value;
+    },
+    updateEventEndTime(value) {
+      this.eventEndTime = value;
     },
     async fetchAttachments(attachments) {
       await Promise.all(
@@ -473,12 +540,26 @@ export default {
         this.popupVisible = false; // Hide the popup if an error occurs
       }
     },
+    async fetchPersonalAvatar(email) {
+      // Fetch personal data method with error handling
+      try {
+        const response = await fetch(
+          `http://localhost:3009/personal-data/${email}`
+        );
+        if (!response.ok) {
+          throw new Error("Failed to fetch personal data.");
+        }
+        const data = await response.json();
+        this.accountData = data;
+      } catch (error) {
+        console.error("Error fetching personal data:", error);
+        this.accountData = null;
+      }
+    },
     hidePopup() {
-      // Hide popup method
       this.popupVisible = false;
     },
     resetState() {
-      // Reset state method
       this.subject = "";
       this.senderEmail = "";
       this.senderName = "";
@@ -489,7 +570,6 @@ export default {
       this.error = null;
       this.fetching = false;
       this.emailItem = null;
-      this.accessToken = null; // Clear the access token
     },
 
     async bookAppointment() {
@@ -663,5 +743,12 @@ export default {
   background-position: center;
   background-repeat: no-repeat;
   background-size: 100px 100px;
+}
+
+.avatar {
+  height: 100px;
+  width: 100px;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
 }
 </style>
