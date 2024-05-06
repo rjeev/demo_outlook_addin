@@ -103,7 +103,8 @@ import {
   PublicClientApplication,
   InteractionRequiredAuthError,
 } from "@azure/msal-browser";
-// import { loginRequest } from "./auth";
+
+import settings from "./appSettings";
 
 export default {
   name: "App",
@@ -121,14 +122,15 @@ export default {
       emailItem: null,
       popupVisible: false,
       personalData: null,
-      accessToken: null, // Add the accessToken property
-      msalInstance: null, // Add the msalInstance property
+      accessToken: null,
+      msalInstance: null,
       isMsalInitialized: false,
       account: null,
     };
   },
   created() {
     this.initializeMsal();
+    console.log(this.msalInstance);
   },
   methods: {
     async initializeMsal() {
@@ -136,7 +138,8 @@ export default {
         const msalConfig = {
           auth: {
             clientId: "6821c268-c82f-46be-a889-dc170861f0d8",
-            authority: "https://login.microsoftonline.com/common",
+            authority:
+              "https://login.microsoftonline.com/8cd7b528-f691-4489-b951-fe0d110d54a6",
             redirectUri: "https://localhost:3000",
           },
           system: {
@@ -151,34 +154,15 @@ export default {
         this.msalInstance.handleRedirectPromise();
         const that = this;
 
+        if (that.accessToken !== null) {
+          // that.accessToken = loginResponse.accessToken;
+          console.log("asds");
+          return;
+        }
+
         await this.msalInstance
           .loginPopup({
-            scopes: [
-              "AuditLog.Read.All",
-              "Calendars.Read",
-              "Calendars.Read.Shared",
-              "Calendars.ReadBasic",
-              "Calendars.ReadWrite",
-              "Calendars.ReadWrite.Shared",
-              "Directory.Read.All",
-              "email",
-              "Mail.Read",
-              "Mail.Read.Shared",
-              "Mail.ReadBasic",
-              "Mail.ReadBasic.Shared",
-              "Mail.ReadWrite",
-              "Mail.ReadWrite.Shared",
-              "Mail.Send",
-              "Mail.Send.Shared",
-              "MailboxSettings.Read",
-              "MailboxSettings.ReadWrite",
-              "openid",
-              "profile",
-              "SecurityEvents.Read.All",
-              "SecurityEvents.ReadWrite.All",
-              "User.Read",
-              "User.ReadWrite",
-            ],
+            scopes: ["User.ReadWrite"],
           })
           .then(function (loginResponse) {
             console.log(loginResponse, "LoginResponse");
@@ -244,7 +228,7 @@ export default {
             console.log(error);
             if (error instanceof InteractionRequiredAuthError) {
               // Fallback to interactive token acquisition if silent call fails
-              return this.msalInstance.acquireTokenPopup(request);
+              return this.msalInstance.acquireTokenSilent(request);
             } else if (error.message.includes("interaction_in_progress")) {
               console.error(
                 "An authentication interaction is already in progress."
