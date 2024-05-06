@@ -6,7 +6,7 @@
       <div class="content-header">
         <div class="padding">
           <h1>Welcome</h1>
-          <button class="myBtn" @click="signIn">Sign In</button>
+          <p>{{ account.name }}</p>
         </div>
       </div>
       <div class="content-main">
@@ -156,12 +156,6 @@ export default {
         this.msalInstance = msalInstance;
         this.msalInstance.handleRedirectPromise();
         const that = this;
-
-        if (that.accessToken !== null) {
-          // that.accessToken = loginResponse.accessToken;
-          console.log("asds");
-          return;
-        }
 
         await this.msalInstance
           .loginPopup({
