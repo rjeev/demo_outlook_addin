@@ -1,6 +1,8 @@
 <template>
   <div id="app">
-    <div class="content">
+    <div class="loader" v-if="accessToken === null"></div>
+
+    <div class="content" v-else>
       <div class="content-header">
         <div class="padding">
           <h1>Welcome</h1>
@@ -104,10 +106,11 @@ import {
   InteractionRequiredAuthError,
 } from "@azure/msal-browser";
 
-import settings from "./appSettings";
+// import LoadingSVG from "./assets/loading.svg";
 
 export default {
   name: "App",
+  // components: { LoadingSVG },
   data() {
     return {
       subject: "",
@@ -657,5 +660,14 @@ export default {
 
 .clickable:hover {
   color: darkblue;
+}
+
+.loader {
+  height: 100vh;
+  width: 100%;
+  background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><circle fill="none" stroke-opacity="1" stroke="%2311EBFF" stroke-width=".5" cx="100" cy="100" r="0"><animate attributeName="r" calcMode="spline" dur="2" values="1;80" keyTimes="0;1" keySplines="0 .2 .5 1" repeatCount="indefinite"></animate><animate attributeName="stroke-width" calcMode="spline" dur="2" values="0;25" keyTimes="0;1" keySplines="0 .2 .5 1" repeatCount="indefinite"></animate><animate attributeName="stroke-opacity" calcMode="spline" dur="2" values="1;0" keyTimes="0;1" keySplines="0 .2 .5 1" repeatCount="indefinite"></animate></circle></svg>');
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 100px 100px;
 }
 </style>
