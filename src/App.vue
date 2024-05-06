@@ -1,12 +1,12 @@
 <template>
   <div id="app">
-    <div class="loader" v-if="accessToken === null"></div>
+    <!-- <div class="loader" v-if="accessToken === null"></div> -->
 
-    <div class="content" v-else>
+    <div class="content">
       <div class="content-header">
         <div class="padding">
           <h1>Welcome</h1>
-          <p>{{ account.name }}</p>
+          <!-- <p>{{ account.name }}</p> -->
         </div>
       </div>
       <div class="content-main">
@@ -25,23 +25,15 @@
           </div>
           <div v-if="ccRecipients.length > 0">
             <p class="title"><b>CC Recipients:</b></p>
-            <span
-              v-for="(recipient, index) in ccRecipients"
-              :key="index"
-              @click="fetchPersonalData(recipient.emailAddress)"
-              class="clickable"
-            >
+            <span v-for="(recipient, index) in ccRecipients" :key="index"
+              @click="fetchPersonalData(recipient.emailAddress)" class="clickable">
               {{ recipient.emailAddress }}
             </span>
           </div>
           <div v-if="bccRecipients.length > 0">
             <p class="title"><b>BCC Recipients:</b></p>
-            <span
-              v-for="(recipient, index) in bccRecipients"
-              :key="index"
-              @click="fetchPersonalData(recipient.emailAddress)"
-              class="clickable"
-            >
+            <span v-for="(recipient, index) in bccRecipients" :key="index"
+              @click="fetchPersonalData(recipient.emailAddress)" class="clickable">
               {{ recipient.emailAddress }}
             </span>
           </div>
@@ -50,7 +42,7 @@
             <div v-for="(attachment, index) in attachments" :key="index">
               <a :href="attachment.url" :download="attachment.name">{{
                 attachment.name
-              }}</a>
+                }}</a>
             </div>
           </div>
           <div>
@@ -62,18 +54,22 @@
             <button class="myBtn" @click="handleLogEmail">Log mail</button>
           </div>
         </div>
-        <button
-          class="myBtn"
-          v-else
-          @click="fetchEmailData"
-          :disabled="fetching"
-        >
+        <button class="myBtn" v-else @click="fetchEmailData" :disabled="fetching">
           {{ fetching ? "Fetching..." : "Run" }}
         </button>
         <div>
-          <button @click="sendEmail">send</button>
+          <button @click="sendEmail" class="myBtn">send</button>
           <button class="myBtn" @click="assignEvent">Assign Event</button>
         </div>
+
+        <button class="myBtn" @click="summarizeContent" :disabled="fetchingOpenAi">
+          {{ fetchingOpenAi ? "summarizing ..." : "Summarize using AI " }}
+        </button>
+
+        <div v-if="summarizedContent"><b>Summarized content:</b>
+          <div class="summarizedContent">{{ summarizedContent }}</div>
+        </div>
+
         <div v-if="error" class="error">{{ error }}</div>
       </div>
     </div>
@@ -84,11 +80,7 @@
         <span class="close" @click="hidePopup">&times;</span>
         <h2 v-if="personalData">{{ personalData.name }}</h2>
         <div v-if="personalData">
-          <img
-            :src="personalData.photo"
-            alt="Profile Photo"
-            class="profile-image"
-          />
+          <img :src="personalData.photo" alt="Profile Photo" class="profile-image" />
           <p><b>Email:</b> {{ personalData.email }}</p>
           <p><b>Designation:</b> {{ personalData.designation }}</p>
         </div>
@@ -105,6 +97,7 @@ import {
   PublicClientApplication,
   InteractionRequiredAuthError,
 } from "@azure/msal-browser";
+import { Configuration, OpenAIApi } from "openai";
 
 // import LoadingSVG from "./assets/loading.svg";
 
@@ -129,11 +122,12 @@ export default {
       msalInstance: null,
       isMsalInitialized: false,
       account: null,
+      fetchingOpenAi: false,
+      summarizedContent: ""
     };
   },
   created() {
-    this.initializeMsal();
-    console.log(this.msalInstance);
+    // this.initializeMsal();
   },
   methods: {
     async initializeMsal() {
@@ -176,6 +170,42 @@ export default {
       } catch (error) {
         console.error("MSAL initialization error:", error);
       }
+    },
+    async summarizeContent() {
+      this.summarizedContent = await this.getSelectedText();
+    },
+    async getSelectedText() {
+      this.fetchingOpenAi = true;
+      return new window.Office.Promise(function (resolve, reject) {
+        try {
+          window.Office.context.mailbox.item.body.getAsync(window.Office.CoercionType.Text, async function (asyncResult) {
+            const configuration = new Configuration({
+              apiKey: process.env.VUE_APP_OPENAI_KEY,
+            });
+            const openAI = new OpenAIApi(configuration);
+            const response = await openAI.createChatCompletion({
+              model: "gpt-3.5-turbo",
+              messages: [
+                {
+                  role: "system",
+                  content:
+                    "You are a helpful assistant that can help users to better manage emails. The following prompt contains the whole mail thread. ",
+                },
+                {
+                  role: "user",
+                  content: "Summarize the following mail thread and extract the key points: " + asyncResult.value,
+                },
+              ],
+            });
+
+            resolve(response.data.choices[0].message.content);
+            this.fetchingOpenAi = false
+          }.bind(this));
+        } catch (error) {
+
+          reject(error);
+        }
+      }.bind(this));
     },
     async signIn() {
       // Check if MSAL instance is fully initialized before attempting sign-in
@@ -490,6 +520,8 @@ export default {
       this.fetching = false;
       this.emailItem = null;
       this.accessToken = null; // Clear the access token
+      this.fetchingOpenAi = false;
+      this.summarizedContent = "";
     },
 
     async bookAppointment() {
@@ -566,7 +598,7 @@ export default {
   margin-bottom: 20px;
 }
 
-.email-content > div {
+.email-content>div {
   margin-bottom: 20px;
 }
 
@@ -605,10 +637,12 @@ export default {
   margin-top: 10px;
   text-align: center;
 }
+
 .email-body {
   width: 100%;
   overflow: auto;
 }
+
 .title {
   margin: 0 0 5px;
 }
@@ -663,5 +697,9 @@ export default {
   background-position: center;
   background-repeat: no-repeat;
   background-size: 100px 100px;
+}
+
+.summarizedContent {
+  white-space: pre-wrap;
 }
 </style>
