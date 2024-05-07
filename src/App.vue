@@ -11,6 +11,7 @@
             class="avatar"
           />
           <p>{{ account.name }},&nbsp;{{ accountData?.designation }}</p>
+          <p>Total email logged: {{ totalEmails }}</p>
           <div class="action-buttons-wrapper">
             <button
               class="myBtn action-buttons"
@@ -117,6 +118,7 @@
         </div>
         <!-- parsed email contents -->
         <div class="email-content" :class="{ blurred: createMode !== '' }">
+          <h2>Email</h2>
           <div>
             <p class="title"><b>Subject:</b></p>
             {{ subject }}
@@ -164,12 +166,10 @@
             <div class="spacer">&nbsp;</div>
             <div v-html="body" class="email-body"></div>
           </div>
-          <div>
-            <button class="myBtn" @click="handleLogEmail">Log mail</button>
-          </div>
         </div>
-
-        <div v-if="error" class="error">{{ error }}</div>
+        <div>
+          <button class="myBtn" @click="handleLogEmail">Log mail</button>
+        </div>
       </div>
     </div>
 
@@ -241,11 +241,13 @@ export default {
       messageTitle: "",
       appointmentTitle: "",
       createMode: "",
+      totalEmails: null,
     };
   },
   created() {
     this.initializeMsal();
     this.fetchEmailData();
+    this.fetchTotalEmails();
   },
   methods: {
     createAppointment() {},
@@ -389,9 +391,11 @@ export default {
           this.$toast.success("Email sent succesfully.");
         } else {
           console.error("Failed to send email:", response.statusText);
+          this.$toast.error("Failed to send email:", response.statusText);
         }
       } catch (error) {
         console.error("Error sending email:", error);
+        this.$toast.error("Error sending email:", error);
       }
     },
     async assignEvent() {
@@ -480,9 +484,11 @@ export default {
           console.log("Event added to Outlook calendar.");
         } else {
           console.error("Failed to add event:", response.statusText);
+          this.$toast.error("Failed to add event:", response.statusText);
         }
       } catch (error) {
         console.error("Error assigning event:", error);
+        this.$toast.error("Error assigning event:", error);
       }
     },
     async fetchEmailData() {
@@ -607,6 +613,8 @@ export default {
         .then((response) => {
           if (response.ok) {
             console.log("Email data successfully logged.");
+            this.$toast.success("Email data successfully logged.");
+            this.fetchTotalEmails();
             // this.resetState();
           } else {
             throw new Error("Failed to log email data.");
@@ -614,6 +622,7 @@ export default {
         })
         .catch((error) => {
           console.error("Error logging email data:", error);
+          this.$toast.error("Error logging email data:", error);
         });
     },
     async fetchPersonalData(email) {
@@ -648,6 +657,19 @@ export default {
       } catch (error) {
         console.error("Error fetching personal data:", error);
         this.accountData = null;
+      }
+    },
+    async fetchTotalEmails() {
+      try {
+        const response = await fetch("http://localhost:3009/emails/count");
+        if (!response.ok) {
+          throw new Error("Failed to fetch total number of emails.");
+        }
+        const data = await response.json();
+        this.totalEmails = data.totalRecords;
+      } catch (error) {
+        console.error("Error fetching total number of emails:", error);
+        // Handle the error as per your application's requirements
       }
     },
     hidePopup() {
@@ -739,6 +761,8 @@ export default {
   border-radius: 5px;
   padding: 15px;
   margin-bottom: 20px;
+  height: calc(100vh - 392px);
+  overflow: auto;
 }
 
 .email-content > div {
@@ -904,6 +928,10 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  position: relative;
+}
+.panel-inner-header h4 {
+  margin-top: 0;
 }
 .action-buttons-wrapper {
   display: flex;
@@ -962,6 +990,10 @@ label {
   border: 0;
   padding: 0;
   background: transparent;
+  position: absolute;
+  right: -8px;
+  top: -10px;
+  cursor: pointer;
 }
 .close-button:hover {
   color: var(--primary-color);
