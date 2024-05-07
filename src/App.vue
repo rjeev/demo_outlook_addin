@@ -206,9 +206,6 @@ import {
   PublicClientApplication,
   InteractionRequiredAuthError,
 } from "@azure/msal-browser";
-import { ref } from "vue";
-
-const testTabs = ref(null);
 
 export default {
   name: "App",
@@ -250,7 +247,6 @@ export default {
     this.fetchTotalEmails();
   },
   methods: {
-    createAppointment() {},
     async initializeMsal() {
       try {
         const msalConfig = {
@@ -686,39 +682,6 @@ export default {
       this.error = null;
       this.fetching = false;
       this.emailItem = null;
-    },
-
-    async bookAppointment() {
-      try {
-        const item = window.Office.context.calendar.getAppointmentForm();
-        item.start.setHours(9, 0, 0, 0);
-        item.end.setHours(10, 0, 0, 0);
-        item.subject = "Appointment Subject";
-        item.location = "Appointment Location";
-        item.requiredAttendees.addEmailAddress("recipient@example.com");
-        item.saveAsync((result) => {
-          if (result.error) {
-            console.error("Error booking appointment:", result.error);
-          } else {
-            console.log("Appointment booked successfully.");
-          }
-        });
-      } catch (error) {
-        console.error("Error booking appointment:", error);
-      }
-    },
-    async sendEmailOrBookAppointment() {
-      try {
-        const isEmail = true; // Change to false for booking an appointment
-
-        if (isEmail) {
-          await this.sendEmail();
-        } else {
-          await this.bookAppointment();
-        }
-      } catch (error) {
-        console.error("Error sending email or booking appointment:", error);
-      }
     },
   },
 };
