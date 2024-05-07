@@ -83,6 +83,24 @@ app.get("/personal-data/:email", async (req, res) => {
   }
 });
 
+app.get("/emails/count", async (req, res) => {
+  try {
+    const client = await pool.connect();
+    const queryText = "SELECT COUNT(*) AS total_records FROM emails";
+    const { rows } = await client.query(queryText);
+    client.release();
+
+    // Extract the total count from the result
+    const totalCount = rows[0].total_records;
+
+    // Send the total count as a JSON response
+    res.status(200).json({ totalRecords: totalCount });
+  } catch (error) {
+    console.error("Error fetching total records:", error);
+    res.status(500).send(`Internal Server Error: ${error.message}`);
+  }
+});
+
 app.listen(port, () => {
   console.log(`Server is listening at http://localhost:${port}`);
 });

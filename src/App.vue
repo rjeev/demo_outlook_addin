@@ -1,16 +1,82 @@
 <template>
   <div id="app">
-    <!-- <div class="loader" v-if="accessToken === null"></div> -->
+    <div class="loader" v-if="!isLoaded"></div>
 
-    <div class="content">
-      <div class="content-header">
+    <div class="content" v-else>
+      <div class="content-header" :class="{ blurred: createMode !== '' }">
         <div class="padding">
-          <h1>Welcome</h1>
-          <!-- <p>{{ account.name }}</p> -->
+          <img :src="accountData?.photo" v-if="accountData !== null" class="avatar" />
+          <p>{{ account.name }},&nbsp;{{ accountData?.designation }}</p>
+          <p>Total email logged: {{ totalEmails }}</p>
+          <div class="action-buttons-wrapper">
+            <button class="myBtn action-buttons" title="Book Appointment" @click="() => (createMode = 'appointment')">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512">
+                <path
+                  d="M128 0c17.7 0 32 14.3 32 32V64H288V32c0-17.7 14.3-32 32-32s32 14.3 32 32V64h48c26.5 0 48 21.5 48 48v48H0V112C0 85.5 21.5 64 48 64H96V32c0-17.7 14.3-32 32-32zM0 192H448V464c0 26.5-21.5 48-48 48H48c-26.5 0-48-21.5-48-48V192zM329 305c9.4-9.4 9.4-24.6 0-33.9s-24.6-9.4-33.9 0l-95 95-47-47c-9.4-9.4-24.6-9.4-33.9 0s-9.4 24.6 0 33.9l64 64c9.4 9.4 24.6 9.4 33.9 0L329 305z" />
+              </svg>
+            </button>
+
+            <button class="myBtn action-buttons" title="Send Mail" @click="() => (createMode = 'email')">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+                <path
+                  d="M48 64C21.5 64 0 85.5 0 112c0 15.1 7.1 29.3 19.2 38.4L236.8 313.6c11.4 8.5 27 8.5 38.4 0L492.8 150.4c12.1-9.1 19.2-23.3 19.2-38.4c0-26.5-21.5-48-48-48H48zM0 176V384c0 35.3 28.7 64 64 64H448c35.3 0 64-28.7 64-64V176L294.4 339.2c-22.8 17.1-54 17.1-76.8 0L0 176z" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
       <div class="content-main">
-        <div class="email-content" v-if="subject">
+        <!-- Appointment form -->
+        <div class="panel-inner" v-if="createMode === 'appointment'">
+          <div class="panel-inner-header">
+            <h4>Compose Appointment</h4>
+            <button class="close-button" @click="handleCloseModal">X</button>
+          </div>
+          <!-- Appointment form -->
+          <div>
+            <label>Appointment Title</label>
+            <input type="text" placeholder="Appointment title" @input="updateAppointmentTitle($event.target.value)"
+              :value="appointmentTitle" />
+          </div>
+          <div>
+            <label>Appointment Date</label>
+            <input type="date" placeholder="Start time" @input="updateEventDay($event.target.value)"
+              :value="eventDay" />
+          </div>
+          <div>
+            <label>Appointment Stgart Time</label>
+            <input type="time" name="Start time" id="startTime" placeholder="Start Time"
+              @input="updateEventStartTime($event.target.value)" :value="eventStartTime" />
+          </div>
+          <div>
+            <label>Appointment End Time</label>
+            <input type="time" name="End time" placeholder="End Time" @input="updateEventEndTime($event.target.value)"
+              :value="eventEndTime" />
+          </div>
+          <button class="myBtn" @click="assignEvent">Assign Event</button>
+        </div>
+        <!-- email form -->
+        <div class="panel-inner" v-if="createMode === 'email'">
+          <div class="panel-inner-header">
+            <h4>Compose Email</h4>
+            <button class="close-button" @click="handleCloseModal">X</button>
+          </div>
+          <!-- Send message form -->
+          <div>
+            <label>Subject of email</label>
+            <input type="text" name="Message" placeholder="Message Title"
+              @input="updateMessageTitle($event.target.value)" :value="messageTitle" />
+          </div>
+          <div>
+            <label>Message of email</label>
+            <textarea name="Message" placeholder="Message" @input="updateMessage($event.target.value)"
+              :value="message" />
+          </div>
+          <button class="myBtn" @click="sendEmail">send</button>
+        </div>
+        <!-- parsed email contents -->
+        <div class="email-content" :class="{ blurred: createMode !== '' }">
+          <h2>Email</h2>
           <div>
             <p class="title"><b>Subject:</b></p>
             {{ subject }}
@@ -42,7 +108,7 @@
             <div v-for="(attachment, index) in attachments" :key="index">
               <a :href="attachment.url" :download="attachment.name">{{
                 attachment.name
-                }}</a>
+              }}</a>
             </div>
           </div>
           <div>
@@ -50,27 +116,17 @@
             <div class="spacer">&nbsp;</div>
             <div v-html="body" class="email-body"></div>
           </div>
-          <div>
-            <button class="myBtn" @click="handleLogEmail">Log mail</button>
-          </div>
         </div>
-        <button class="myBtn" v-else @click="fetchEmailData" :disabled="fetching">
-          {{ fetching ? "Fetching..." : "Run" }}
-        </button>
-        <div>
-          <button @click="sendEmail" class="myBtn">send</button>
-          <button class="myBtn" @click="assignEvent">Assign Event</button>
-        </div>
-
         <button class="myBtn" @click="summarizeContent" :disabled="fetchingOpenAi">
           {{ fetchingOpenAi ? "summarizing ..." : "Summarize using AI " }}
         </button>
 
         <div v-if="summarizedContent"><b>Summarized content:</b>
-          <div class="summarizedContent">{{ summarizedContent }}</div>
+          <div class="summarizedContent email-content">{{ summarizedContent }}</div>
         </div>
-
-        <div v-if="error" class="error">{{ error }}</div>
+        <div>
+          <button class="myBtn" @click="handleLogEmail">Log mail</button>
+        </div>
       </div>
     </div>
 
@@ -89,6 +145,8 @@
         </div>
       </div>
     </div>
+    <!-- backdrop for modals -->
+    <div v-if="createMode !== ''" class="backdrop" @click="handleCloseModal"></div>
   </div>
 </template>
 
@@ -98,14 +156,16 @@ import {
   InteractionRequiredAuthError,
 } from "@azure/msal-browser";
 import { Configuration, OpenAIApi } from "openai";
+import { ref } from "vue";
 
-// import LoadingSVG from "./assets/loading.svg";
+const testTabs = ref(null);
 
 export default {
   name: "App",
-  // components: { LoadingSVG },
+
   data() {
     return {
+      isLoaded: false,
       subject: "",
       senderEmail: "",
       senderName: "",
@@ -123,20 +183,32 @@ export default {
       isMsalInitialized: false,
       account: null,
       fetchingOpenAi: false,
-      summarizedContent: ""
+      summarizedContent: "",
+      accountData: null,
+      eventDay: null,
+      eventStartTime: null,
+      eventEndTime: null,
+      isEventCreateMode: false,
+      message: "",
+      messageTitle: "",
+      appointmentTitle: "",
+      createMode: "",
+      totalEmails: null,
     };
   },
   created() {
-    // this.initializeMsal();
+    this.initializeMsal();
+    this.fetchEmailData();
+    this.fetchTotalEmails();
   },
   methods: {
+    createAppointment() { },
     async initializeMsal() {
       try {
         const msalConfig = {
           auth: {
             clientId: "6821c268-c82f-46be-a889-dc170861f0d8",
-            authority:
-              "https://login.microsoftonline.com/8cd7b528-f691-4489-b951-fe0d110d54a6",
+            authority: "https://login.microsoftonline.com/common",
             redirectUri: "https://localhost:3000",
           },
           system: {
@@ -156,15 +228,12 @@ export default {
             scopes: ["User.ReadWrite"],
           })
           .then(function (loginResponse) {
-            console.log(loginResponse, "LoginResponse");
             that.accessToken = loginResponse.accessToken;
             that.account = loginResponse.account;
-            // accountId = loginResponse.account.homeAccountId;
-            // Display signed-in user content, call API, etc.
-            // that.signIn();
+            that.fetchPersonalAvatar(that.account.username);
+            that.isLoaded = true;
           })
           .catch(function (error) {
-            //login failure
             console.log(error);
           });
       } catch (error) {
@@ -208,7 +277,6 @@ export default {
       }.bind(this));
     },
     async signIn() {
-      // Check if MSAL instance is fully initialized before attempting sign-in
       if (!this.isMsalInitialized) {
         console.error("MSAL instance is not initialized");
         return;
@@ -271,23 +339,25 @@ export default {
         console.error("Sign-in error:", error);
       }
     },
+    handleCloseModal() {
+      this.createMode = "";
+    },
     async sendEmail() {
       try {
-        const accessToken = this.accessToken; // Assuming you have obtained the access token
-        // console.log(accessToken, "this.accessToken");
+        const accessToken = this.accessToken;
         const apiUrl = "https://graph.microsoft.com/v1.0/me/sendMail";
 
         const emailData = {
           message: {
-            subject: "Subject of the email",
+            subject: this.messageTitle,
             body: {
               contentType: "HTML",
-              content: "Body of the email",
+              content: this.message,
             },
             toRecipients: [
               {
                 emailAddress: {
-                  address: "9841pratik@gmail.com",
+                  address: this.senderEmail,
                 },
               },
             ],
@@ -305,28 +375,72 @@ export default {
 
         if (response.ok) {
           console.log("Email sent successfully.");
+          this.createMode = "";
+          this.$toast.success("Email sent succesfully.");
         } else {
           console.error("Failed to send email:", response.statusText);
+          this.$toast.error("Failed to send email:", response.statusText);
         }
       } catch (error) {
         console.error("Error sending email:", error);
+        this.$toast.error("Error sending email:", error);
       }
     },
     async assignEvent() {
+      const that = this;
       try {
-        // Microsoft Graph API endpoint to create an event in the calendar
         const apiUrl = "https://graph.microsoft.com/v1.0/me/events";
 
-        // Data for the event
+        const formatDate = (date) => {
+          // Pad single digits with leading zero
+          return date < 10 ? "0" + date : date;
+        };
+
+        const formatDateTime = (date, time) => {
+          const [hour, minute] = time.split(":");
+          const formattedHour = hour.padStart(2, "0"); // Ensure hour has two digits
+          const formattedMinute = minute.padStart(2, "0"); // Ensure minute has two digits
+          return `${date.getFullYear()}-${formatDate(
+            date.getMonth() + 1
+          )}-${formatDate(
+            date.getDate()
+          )}T${formattedHour}:${formattedMinute}:00`;
+        };
+
+        // Construct start and end dateTime
+        const startDateTime = formatDateTime(
+          new Date(this.eventDay),
+          this.eventStartTime
+        );
+        const endDateTime = formatDateTime(
+          new Date(this.eventDay),
+          this.eventEndTime
+        );
+
+        const allAttendees = [
+          { emailAddress: { address: that.senderEmail }, type: "required" },
+          ...that.bccRecipients.map((recipient) => ({
+            emailAddress: { address: recipient.emailAddress },
+            type: "bcc",
+          })),
+          ...that.ccRecipients.map((recipient) => ({
+            emailAddress: { address: recipient.emailAddress },
+            type: "cc",
+          })),
+        ];
+        const currentTimezone =
+          Intl.DateTimeFormat().resolvedOptions().timeZone;
+        console.log(allAttendees, "allAttendees");
+        console.log(currentTimezone);
         const eventData = {
-          subject: "Meeting with Client 1",
+          subject: this.appointmentTitle,
           start: {
-            dateTime: "2024-05-03T10:00:00",
-            timeZone: "Pacific Standard Time",
+            dateTime: startDateTime,
+            timeZone: currentTimezone,
           },
           end: {
-            dateTime: "2024-05-06T11:00:00",
-            timeZone: "Pacific Standard Time",
+            dateTime: endDateTime,
+            timeZone: currentTimezone,
           },
           location: {
             displayName: "Conference Room",
@@ -335,25 +449,34 @@ export default {
             content: "Discuss project progress.",
             contentType: "text",
           },
+          attendees: allAttendees.map((attendee) => ({
+            emailAddress: {
+              address: attendee.emailAddress.address,
+            },
+            type: "Required",
+          })),
         };
 
-        // Make a POST request to create the event
         const response = await fetch(apiUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${this.accessToken}`, // Assuming you have obtained the access token
+            Authorization: `Bearer ${this.accessToken}`,
           },
           body: JSON.stringify(eventData),
         });
 
         if (response.ok) {
+          this.createMode = "";
+          this.$toast.success("Appointment created succesfully.");
           console.log("Event added to Outlook calendar.");
         } else {
           console.error("Failed to add event:", response.statusText);
+          this.$toast.error("Failed to add event:", response.statusText);
         }
       } catch (error) {
         console.error("Error assigning event:", error);
+        this.$toast.error("Error assigning event:", error);
       }
     },
     async fetchEmailData() {
@@ -367,31 +490,33 @@ export default {
         this.senderName = item.from.displayName;
         this.ccRecipients = item.cc || [];
         this.bccRecipients = item.bcc || [];
-        const that = this;
-        window.Office.context.mailbox.getCallbackTokenAsync(
-          { isRest: true },
-          function (result) {
-            if (result.status === window.Office.AsyncResultStatus.Succeeded) {
-              that.accessToken = result.value;
-              console.log(that.accessToken, "accessToken");
-              // Use the token to authenticate with the remote service
-            } else {
-              console.error(
-                "Failed to retrieve callback token:",
-                result.error.message
-              );
-            }
-          }
-        );
+
         await this.fetchAttachments(item.attachments);
         await this.fetchEmailBody();
       } catch (error) {
         console.error("Error fetching email data:", error);
         this.error = "Error fetching email data. Please try again.";
       } finally {
-        // console.log(this.emailItem, "item");
         this.fetching = false;
       }
+    },
+    updateEventDay(value) {
+      this.eventDay = value;
+    },
+    updateAppointmentTitle(value) {
+      this.appointmentTitle = value;
+    },
+    updateEventStartTime(value) {
+      this.eventStartTime = value;
+    },
+    updateEventEndTime(value) {
+      this.eventEndTime = value;
+    },
+    updateMessage(value) {
+      this.message = value;
+    },
+    updateMessageTitle(value) {
+      this.messageTitle = value;
     },
     async fetchAttachments(attachments) {
       await Promise.all(
@@ -476,13 +601,16 @@ export default {
         .then((response) => {
           if (response.ok) {
             console.log("Email data successfully logged.");
-            this.resetState();
+            this.$toast.success("Email data successfully logged.");
+            this.fetchTotalEmails();
+            // this.resetState();
           } else {
             throw new Error("Failed to log email data.");
           }
         })
         .catch((error) => {
           console.error("Error logging email data:", error);
+          this.$toast.error("Error logging email data:", error);
         });
     },
     async fetchPersonalData(email) {
@@ -503,12 +631,39 @@ export default {
         this.popupVisible = false; // Hide the popup if an error occurs
       }
     },
+    async fetchPersonalAvatar(email) {
+      // Fetch personal data method with error handling
+      try {
+        const response = await fetch(
+          `http://localhost:3009/personal-data/${email}`
+        );
+        if (!response.ok) {
+          throw new Error("Failed to fetch personal data.");
+        }
+        const data = await response.json();
+        this.accountData = data;
+      } catch (error) {
+        console.error("Error fetching personal data:", error);
+        this.accountData = null;
+      }
+    },
+    async fetchTotalEmails() {
+      try {
+        const response = await fetch("http://localhost:3009/emails/count");
+        if (!response.ok) {
+          throw new Error("Failed to fetch total number of emails.");
+        }
+        const data = await response.json();
+        this.totalEmails = data.totalRecords;
+      } catch (error) {
+        console.error("Error fetching total number of emails:", error);
+        // Handle the error as per your application's requirements
+      }
+    },
     hidePopup() {
-      // Hide popup method
       this.popupVisible = false;
     },
     resetState() {
-      // Reset state method
       this.subject = "";
       this.senderEmail = "";
       this.senderName = "";
@@ -519,7 +674,6 @@ export default {
       this.error = null;
       this.fetching = false;
       this.emailItem = null;
-      this.accessToken = null; // Clear the access token
       this.fetchingOpenAi = false;
       this.summarizedContent = "";
     },
@@ -579,6 +733,7 @@ export default {
   color: var(--secondary-color);
   padding: 15px;
   text-align: center;
+  border-radius: 5px;
 }
 
 .content-main {
@@ -596,6 +751,8 @@ export default {
   border-radius: 5px;
   padding: 15px;
   margin-bottom: 20px;
+  height: calc(100vh - 392px);
+  overflow: auto;
 }
 
 .email-content>div {
@@ -697,6 +854,159 @@ export default {
   background-position: center;
   background-repeat: no-repeat;
   background-size: 100px 100px;
+}
+
+.avatar {
+  height: 100px;
+  width: 100px;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+}
+
+.tabs-component-tabs {
+  display: block;
+  padding: 0;
+}
+
+.tabs-component-tab {
+  list-style-type: none;
+  margin-bottom: 20px;
+}
+
+.tabs-component-tab-a {
+  display: block;
+  text-align: center;
+  height: 40px;
+  line-height: 40px;
+  background-color: var(--secondary-color);
+  color: var(--primary-color);
+  border: 2px solid var(--primary-color);
+  border-radius: 5px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.tabs-component-tab-a:hover {
+  background: var(--primary-color);
+  color: var(--secondary-color);
+}
+
+.tabs-component-tab-a.is-active {
+  background: var(--primary-color);
+  color: var(--secondary-color);
+}
+
+.tabs-component-tab:first-child {
+  opacity: 0;
+  height: 0;
+  width: 0;
+  margin: 0;
+}
+
+.tabs-component-panel {}
+
+#email-content-pane {
+  position: static;
+}
+
+.panel-inner {
+  background: white;
+  margin: 20px;
+  padding: 20px;
+  border-radius: 4px;
+  position: fixed;
+  left: 0;
+  top: 50%;
+  right: 0;
+  z-index: 2;
+  transform: translateY(-50%);
+  box-shadow: rgba(50, 50, 93, 0.25) 0px 50px 100px -20px,
+    rgba(0, 0, 0, 0.3) 0px 30px 60px -30px;
+}
+
+.panel-inner-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+}
+
+.panel-inner-header h4 {
+  margin-top: 0;
+}
+
+.action-buttons-wrapper {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  align-items: center;
+}
+
+.action-buttons {
+  height: 35px;
+  width: 35px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  border-radius: 50%;
+  background-color: white;
+}
+
+.action-buttons svg {
+  height: 20px;
+  width: 20px;
+  fill: var(--primary-color);
+}
+
+.action-buttons:hover svg {
+  fill: var(--secondary-color);
+}
+
+.backdrop {
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  background-color: rgba(255, 255, 255, 0.746);
+}
+
+.blurred {
+  filter: blur(5px);
+}
+
+/* form styles */
+input,
+textarea {
+  margin-bottom: 20px;
+  display: block;
+  width: 100%;
+}
+
+label {
+  font-size: 12px;
+  margin-bottom: 5px;
+  display: block;
+  width: 100%;
+  font-weight: 600;
+  color: #888888;
+}
+
+.close-button {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  position: absolute;
+  right: -8px;
+  top: -10px;
+  cursor: pointer;
+}
+
+.close-button:hover {
+  color: var(--primary-color);
 }
 
 .summarizedContent {
