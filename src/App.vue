@@ -22,87 +22,103 @@
           <button class="myBtn" @click="sendEmail">send</button>
           <button class="myBtn" @click="assignEvent">Assign Event</button>
         </div>
-        <!-- prsed email contents -->
-        <div class="email-content" v-if="subject">
-          <div>
-            <p class="title"><b>Subject:</b></p>
-            {{ subject }}
-          </div>
-          <div>
-            <p class="title"><b>Sender Email:</b></p>
-            {{ senderEmail }}
-          </div>
-          <div>
-            <p class="title"><b>Sender Name:</b></p>
-            {{ senderName }}
-          </div>
-          <div v-if="ccRecipients.length > 0">
-            <p class="title"><b>CC Recipients:</b></p>
-            <span
-              v-for="(recipient, index) in ccRecipients"
-              :key="index"
-              @click="fetchPersonalData(recipient.emailAddress)"
-              class="clickable"
-            >
-              {{ recipient.emailAddress }}
-            </span>
-          </div>
-          <div v-if="bccRecipients.length > 0">
-            <p class="title"><b>BCC Recipients:</b></p>
-            <span
-              v-for="(recipient, index) in bccRecipients"
-              :key="index"
-              @click="fetchPersonalData(recipient.emailAddress)"
-              class="clickable"
-            >
-              {{ recipient.emailAddress }}
-            </span>
-          </div>
-          <div v-if="attachments.length > 0">
-            <p class="title"><b>Attachments:</b></p>
-            <div v-for="(attachment, index) in attachments" :key="index">
-              <a :href="attachment.url" :download="attachment.name">{{
-                attachment.name
-              }}</a>
+        <Tabs>
+          <Tab name="parsed-email">
+            <!-- parsed email contents -->
+            <div class="email-content">
+              <div>
+                <p class="title"><b>Subject:</b></p>
+                {{ subject }}
+              </div>
+              <div>
+                <p class="title"><b>Sender Email:</b></p>
+                {{ senderEmail }}
+              </div>
+              <div>
+                <p class="title"><b>Sender Name:</b></p>
+                {{ senderName }}
+              </div>
+              <div v-if="ccRecipients.length > 0">
+                <p class="title"><b>CC Recipients:</b></p>
+                <span
+                  v-for="(recipient, index) in ccRecipients"
+                  :key="index"
+                  @click="fetchPersonalData(recipient.emailAddress)"
+                  class="clickable"
+                >
+                  {{ recipient.emailAddress }}
+                </span>
+              </div>
+              <div v-if="bccRecipients.length > 0">
+                <p class="title"><b>BCC Recipients:</b></p>
+                <span
+                  v-for="(recipient, index) in bccRecipients"
+                  :key="index"
+                  @click="fetchPersonalData(recipient.emailAddress)"
+                  class="clickable"
+                >
+                  {{ recipient.emailAddress }}
+                </span>
+              </div>
+              <div v-if="attachments.length > 0">
+                <p class="title"><b>Attachments:</b></p>
+                <div v-for="(attachment, index) in attachments" :key="index">
+                  <a :href="attachment.url" :download="attachment.name">{{
+                    attachment.name
+                  }}</a>
+                </div>
+              </div>
+              <div>
+                <b>Body:</b>
+                <div class="spacer">&nbsp;</div>
+                <div v-html="body" class="email-body"></div>
+              </div>
+              <div>
+                <button class="myBtn" @click="handleLogEmail">Log mail</button>
+              </div>
             </div>
-          </div>
-          <div>
-            <b>Body:</b>
-            <div class="spacer">&nbsp;</div>
-            <div v-html="body" class="email-body"></div>
-          </div>
-          <div>
-            <button class="myBtn" @click="handleLogEmail">Log mail</button>
-          </div>
-        </div>
-        <!-- Appointment form -->
-        <div v-if="!isEventCreateMode">
-          <input
-            type="date"
-            placeholder="Start time"
-            @input="updateEventDay($event.target.value)"
-            :value="eventDay"
-          />
-          <input
-            type="time"
-            name="Start time"
-            id="startTime"
-            placeholder="Start Time"
-            @input="updateEventStartTime($event.target.value)"
-            :value="eventStartTime"
-          />
-          <input
-            type="time"
-            name="End time"
-            placeholder="End Time"
-            @input="updateEventEndTime($event.target.value)"
-            :value="eventEndTime"
-          />
-
-          {{ eventDay }}
-          {{ eventStartTime }}
-          {{ eventEndTime }}
-        </div>
+          </Tab>
+          <Tab name="appointment-form">
+            <!-- Appointment form -->
+            <input
+              type="date"
+              placeholder="Start time"
+              @input="updateEventDay($event.target.value)"
+              :value="eventDay"
+            />
+            <input
+              type="time"
+              name="Start time"
+              id="startTime"
+              placeholder="Start Time"
+              @input="updateEventStartTime($event.target.value)"
+              :value="eventStartTime"
+            />
+            <input
+              type="time"
+              name="End time"
+              placeholder="End Time"
+              @input="updateEventEndTime($event.target.value)"
+              :value="eventEndTime"
+            />
+          </Tab>
+          <Tab name="Message">
+            <!-- Send message form -->
+            <input
+              type="text"
+              name="Message"
+              placeholder="Message Title"
+              @input="updateMessageTitle($event.target.value)"
+              :value="messageTitle"
+            />
+            <textarea
+              name="Message"
+              placeholder="Message"
+              @input="updateMessage($event.target.value)"
+              :value="message"
+            />
+          </Tab>
+        </Tabs>
         <div v-if="error" class="error">{{ error }}</div>
       </div>
     </div>
@@ -134,9 +150,14 @@ import {
   PublicClientApplication,
   InteractionRequiredAuthError,
 } from "@azure/msal-browser";
+import { Tabs, Tab } from "vue3-tabs-component";
 
 export default {
   name: "App",
+  components: {
+    Tab,
+    Tabs,
+  },
   data() {
     return {
       isLoaded: false,
@@ -161,10 +182,13 @@ export default {
       eventStartTime: null,
       eventEndTime: null,
       isEventCreateMode: false,
+      message: "",
+      messageTitle: "",
     };
   },
   created() {
     this.initializeMsal();
+    this.fetchEmailData();
   },
   methods: {
     createAppointment() {},
@@ -275,15 +299,15 @@ export default {
 
         const emailData = {
           message: {
-            subject: "Subject of the email",
+            subject: this.messageTitle,
             body: {
               contentType: "HTML",
-              content: "Body of the email",
+              content: this.message,
             },
             toRecipients: [
               {
                 emailAddress: {
-                  address: "9841pratik@gmail.com",
+                  address: this.senderEmail,
                 },
               },
             ],
@@ -430,6 +454,12 @@ export default {
     updateEventEndTime(value) {
       this.eventEndTime = value;
     },
+    updateMessage(value) {
+      this.message = value;
+    },
+    updateMessageTitle(value) {
+      this.messageTitle = value;
+    },
     async fetchAttachments(attachments) {
       await Promise.all(
         attachments.map(async (attachment) => {
@@ -513,7 +543,7 @@ export default {
         .then((response) => {
           if (response.ok) {
             console.log("Email data successfully logged.");
-            this.resetState();
+            // this.resetState();
           } else {
             throw new Error("Failed to log email data.");
           }
