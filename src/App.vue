@@ -3,7 +3,7 @@
     <div class="loader" v-if="!isLoaded"></div>
 
     <div class="content" v-else>
-      <div class="content-header">
+      <div class="content-header" :class="{ blurred: createMode !== '' }">
         <div class="padding">
           <img
             :src="accountData?.photo"
@@ -11,81 +11,61 @@
             class="avatar"
           />
           <p>{{ account.name }},&nbsp;{{ accountData?.designation }}</p>
+          <div class="action-buttons-wrapper">
+            <button
+              class="myBtn action-buttons"
+              title="Book Appointment"
+              @click="() => (createMode = 'appointment')"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512">
+                <path
+                  d="M128 0c17.7 0 32 14.3 32 32V64H288V32c0-17.7 14.3-32 32-32s32 14.3 32 32V64h48c26.5 0 48 21.5 48 48v48H0V112C0 85.5 21.5 64 48 64H96V32c0-17.7 14.3-32 32-32zM0 192H448V464c0 26.5-21.5 48-48 48H48c-26.5 0-48-21.5-48-48V192zM329 305c9.4-9.4 9.4-24.6 0-33.9s-24.6-9.4-33.9 0l-95 95-47-47c-9.4-9.4-24.6-9.4-33.9 0s-9.4 24.6 0 33.9l64 64c9.4 9.4 24.6 9.4 33.9 0L329 305z"
+                />
+              </svg>
+            </button>
+
+            <button
+              class="myBtn action-buttons"
+              title="Send Mail"
+              @click="() => (createMode = 'email')"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+                <path
+                  d="M48 64C21.5 64 0 85.5 0 112c0 15.1 7.1 29.3 19.2 38.4L236.8 313.6c11.4 8.5 27 8.5 38.4 0L492.8 150.4c12.1-9.1 19.2-23.3 19.2-38.4c0-26.5-21.5-48-48-48H48zM0 176V384c0 35.3 28.7 64 64 64H448c35.3 0 64-28.7 64-64V176L294.4 339.2c-22.8 17.1-54 17.1-76.8 0L0 176z"
+                />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
       <div class="content-main">
-        <!-- addon actions -->
-        <div class="actions">
-          <button class="myBtn" @click="fetchEmailData" :disabled="fetching">
-            {{ fetching ? "Fetching..." : "Parse Email" }}
-          </button>
-          <button class="myBtn" @click="sendEmail">send</button>
-          <button class="myBtn" @click="assignEvent">Assign Event</button>
-        </div>
-        <Tabs>
-          <Tab name="parsed-email">
-            <!-- parsed email contents -->
-            <div class="email-content">
-              <div>
-                <p class="title"><b>Subject:</b></p>
-                {{ subject }}
-              </div>
-              <div>
-                <p class="title"><b>Sender Email:</b></p>
-                {{ senderEmail }}
-              </div>
-              <div>
-                <p class="title"><b>Sender Name:</b></p>
-                {{ senderName }}
-              </div>
-              <div v-if="ccRecipients.length > 0">
-                <p class="title"><b>CC Recipients:</b></p>
-                <span
-                  v-for="(recipient, index) in ccRecipients"
-                  :key="index"
-                  @click="fetchPersonalData(recipient.emailAddress)"
-                  class="clickable"
-                >
-                  {{ recipient.emailAddress }}
-                </span>
-              </div>
-              <div v-if="bccRecipients.length > 0">
-                <p class="title"><b>BCC Recipients:</b></p>
-                <span
-                  v-for="(recipient, index) in bccRecipients"
-                  :key="index"
-                  @click="fetchPersonalData(recipient.emailAddress)"
-                  class="clickable"
-                >
-                  {{ recipient.emailAddress }}
-                </span>
-              </div>
-              <div v-if="attachments.length > 0">
-                <p class="title"><b>Attachments:</b></p>
-                <div v-for="(attachment, index) in attachments" :key="index">
-                  <a :href="attachment.url" :download="attachment.name">{{
-                    attachment.name
-                  }}</a>
-                </div>
-              </div>
-              <div>
-                <b>Body:</b>
-                <div class="spacer">&nbsp;</div>
-                <div v-html="body" class="email-body"></div>
-              </div>
-              <div>
-                <button class="myBtn" @click="handleLogEmail">Log mail</button>
-              </div>
-            </div>
-          </Tab>
-          <Tab name="appointment-form">
-            <!-- Appointment form -->
+        <!-- Appointment form -->
+        <div class="panel-inner" v-if="createMode === 'appointment'">
+          <div class="panel-inner-header">
+            <h4>Compose Appointment</h4>
+            <button class="close-button" @click="handleCloseModal">X</button>
+          </div>
+          <!-- Appointment form -->
+          <div>
+            <label>Appointment Title</label>
+            <input
+              type="text"
+              placeholder="Appointment title"
+              @input="updateAppointmentTitle($event.target.value)"
+              :value="appointmentTitle"
+            />
+          </div>
+          <div>
+            <label>Appointment Date</label>
             <input
               type="date"
               placeholder="Start time"
               @input="updateEventDay($event.target.value)"
               :value="eventDay"
             />
+          </div>
+          <div>
+            <label>Appointment Stgart Time</label>
             <input
               type="time"
               name="Start time"
@@ -94,6 +74,9 @@
               @input="updateEventStartTime($event.target.value)"
               :value="eventStartTime"
             />
+          </div>
+          <div>
+            <label>Appointment End Time</label>
             <input
               type="time"
               name="End time"
@@ -101,9 +84,18 @@
               @input="updateEventEndTime($event.target.value)"
               :value="eventEndTime"
             />
-          </Tab>
-          <Tab name="Message">
-            <!-- Send message form -->
+          </div>
+          <button class="myBtn" @click="assignEvent">Assign Event</button>
+        </div>
+        <!-- email form -->
+        <div class="panel-inner" v-if="createMode === 'email'">
+          <div class="panel-inner-header">
+            <h4>Compose Email</h4>
+            <button class="close-button" @click="handleCloseModal">X</button>
+          </div>
+          <!-- Send message form -->
+          <div>
+            <label>Subject of email</label>
             <input
               type="text"
               name="Message"
@@ -111,14 +103,72 @@
               @input="updateMessageTitle($event.target.value)"
               :value="messageTitle"
             />
+          </div>
+          <div>
+            <label>Message of email</label>
             <textarea
               name="Message"
               placeholder="Message"
               @input="updateMessage($event.target.value)"
               :value="message"
             />
-          </Tab>
-        </Tabs>
+          </div>
+          <button class="myBtn" @click="sendEmail">send</button>
+        </div>
+        <!-- parsed email contents -->
+        <div class="email-content" :class="{ blurred: createMode !== '' }">
+          <div>
+            <p class="title"><b>Subject:</b></p>
+            {{ subject }}
+          </div>
+          <div>
+            <p class="title"><b>Sender Email:</b></p>
+            {{ senderEmail }}
+          </div>
+          <div>
+            <p class="title"><b>Sender Name:</b></p>
+            {{ senderName }}
+          </div>
+          <div v-if="ccRecipients.length > 0">
+            <p class="title"><b>CC Recipients:</b></p>
+            <span
+              v-for="(recipient, index) in ccRecipients"
+              :key="index"
+              @click="fetchPersonalData(recipient.emailAddress)"
+              class="clickable"
+            >
+              {{ recipient.emailAddress }}
+            </span>
+          </div>
+          <div v-if="bccRecipients.length > 0">
+            <p class="title"><b>BCC Recipients:</b></p>
+            <span
+              v-for="(recipient, index) in bccRecipients"
+              :key="index"
+              @click="fetchPersonalData(recipient.emailAddress)"
+              class="clickable"
+            >
+              {{ recipient.emailAddress }}
+            </span>
+          </div>
+          <div v-if="attachments.length > 0">
+            <p class="title"><b>Attachments:</b></p>
+            <div v-for="(attachment, index) in attachments" :key="index">
+              <a :href="attachment.url" :download="attachment.name">{{
+                attachment.name
+              }}</a>
+            </div>
+          </div>
+          <div>
+            <b>Body:</b>
+            <div class="spacer">&nbsp;</div>
+            <div v-html="body" class="email-body"></div>
+          </div>
+          <div>
+            <button class="myBtn" @click="handleLogEmail">Log mail</button>
+          </div>
+        </div>
+
         <div v-if="error" class="error">{{ error }}</div>
       </div>
     </div>
@@ -142,6 +192,12 @@
         </div>
       </div>
     </div>
+    <!-- backdrop for modals -->
+    <div
+      v-if="createMode !== ''"
+      class="backdrop"
+      @click="handleCloseModal"
+    ></div>
   </div>
 </template>
 
@@ -150,14 +206,13 @@ import {
   PublicClientApplication,
   InteractionRequiredAuthError,
 } from "@azure/msal-browser";
-import { Tabs, Tab } from "vue3-tabs-component";
+import { ref } from "vue";
+
+const testTabs = ref(null);
 
 export default {
   name: "App",
-  components: {
-    Tab,
-    Tabs,
-  },
+
   data() {
     return {
       isLoaded: false,
@@ -184,6 +239,8 @@ export default {
       isEventCreateMode: false,
       message: "",
       messageTitle: "",
+      appointmentTitle: "",
+      createMode: "",
     };
   },
   created() {
@@ -292,6 +349,9 @@ export default {
         console.error("Sign-in error:", error);
       }
     },
+    handleCloseModal() {
+      this.createMode = "";
+    },
     async sendEmail() {
       try {
         const accessToken = this.accessToken;
@@ -325,6 +385,8 @@ export default {
 
         if (response.ok) {
           console.log("Email sent successfully.");
+          this.createMode = "";
+          this.$toast.success("Email sent succesfully.");
         } else {
           console.error("Failed to send email:", response.statusText);
         }
@@ -333,9 +395,6 @@ export default {
       }
     },
     async assignEvent() {
-      console.log(this.bccRecipients, "bcc");
-      console.log(this.ccRecipients, "Cc");
-      console.log(this.senderEmail, "senderEmail");
       const that = this;
       try {
         const apiUrl = "https://graph.microsoft.com/v1.0/me/events";
@@ -382,7 +441,7 @@ export default {
         console.log(allAttendees, "allAttendees");
         console.log(currentTimezone);
         const eventData = {
-          subject: "Meeting with Recipients",
+          subject: this.appointmentTitle,
           start: {
             dateTime: startDateTime,
             timeZone: currentTimezone,
@@ -416,6 +475,8 @@ export default {
         });
 
         if (response.ok) {
+          this.createMode = "";
+          this.$toast.success("Appointment created succesfully.");
           console.log("Event added to Outlook calendar.");
         } else {
           console.error("Failed to add event:", response.statusText);
@@ -447,6 +508,9 @@ export default {
     },
     updateEventDay(value) {
       this.eventDay = value;
+    },
+    updateAppointmentTitle(value) {
+      this.appointmentTitle = value;
     },
     updateEventStartTime(value) {
       this.eventStartTime = value;
@@ -657,6 +721,7 @@ export default {
   color: var(--secondary-color);
   padding: 15px;
   text-align: center;
+  border-radius: 5px;
 }
 
 .content-main {
@@ -780,5 +845,125 @@ export default {
   width: 100px;
   border: 2px solid #ffffff;
   border-radius: 50%;
+}
+.tabs-component-tabs {
+  display: block;
+  padding: 0;
+}
+
+.tabs-component-tab {
+  list-style-type: none;
+  margin-bottom: 20px;
+}
+.tabs-component-tab-a {
+  display: block;
+  text-align: center;
+  height: 40px;
+  line-height: 40px;
+  background-color: var(--secondary-color);
+  color: var(--primary-color);
+  border: 2px solid var(--primary-color);
+  border-radius: 5px;
+  font-weight: 500;
+  text-decoration: none;
+}
+.tabs-component-tab-a:hover {
+  background: var(--primary-color);
+  color: var(--secondary-color);
+}
+.tabs-component-tab-a.is-active {
+  background: var(--primary-color);
+  color: var(--secondary-color);
+}
+.tabs-component-tab:first-child {
+  opacity: 0;
+  height: 0;
+  width: 0;
+  margin: 0;
+}
+.tabs-component-panel {
+}
+#email-content-pane {
+  position: static;
+}
+.panel-inner {
+  background: white;
+  margin: 20px;
+  padding: 20px;
+  border-radius: 4px;
+  position: fixed;
+  left: 0;
+  top: 50%;
+  right: 0;
+  z-index: 2;
+  transform: translateY(-50%);
+  box-shadow: rgba(50, 50, 93, 0.25) 0px 50px 100px -20px,
+    rgba(0, 0, 0, 0.3) 0px 30px 60px -30px;
+}
+.panel-inner-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.action-buttons-wrapper {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  align-items: center;
+}
+.action-buttons {
+  height: 35px;
+  width: 35px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  border-radius: 50%;
+  background-color: white;
+}
+.action-buttons svg {
+  height: 20px;
+  width: 20px;
+  fill: var(--primary-color);
+}
+.action-buttons:hover svg {
+  fill: var(--secondary-color);
+}
+.backdrop {
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  background-color: rgba(255, 255, 255, 0.746);
+}
+.blurred {
+  filter: blur(5px);
+}
+
+/* form styles */
+input,
+textarea {
+  margin-bottom: 20px;
+  display: block;
+  width: 100%;
+}
+label {
+  font-size: 12px;
+  margin-bottom: 5px;
+  display: block;
+  width: 100%;
+  font-weight: 600;
+  color: #888888;
+}
+.close-button {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+.close-button:hover {
+  color: var(--primary-color);
 }
 </style>
