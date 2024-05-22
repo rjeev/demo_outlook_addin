@@ -167,6 +167,20 @@
             <div v-html="body" class="email-body"></div>
           </div>
         </div>
+        <button
+          class="myBtn"
+          @click="summarizeContent"
+          :disabled="fetchingOpenAi"
+        >
+          {{ fetchingOpenAi ? "summarizing ..." : "Summarize using AI " }}
+        </button>
+
+        <div v-if="summarizedContent">
+          <b>Summarized content:</b>
+          <div class="summarizedContent email-content">
+            {{ summarizedContent }}
+          </div>
+        </div>
         <div>
           <button class="myBtn" @click="handleLogEmail">Log mail</button>
         </div>
@@ -206,6 +220,10 @@ import {
   PublicClientApplication,
   InteractionRequiredAuthError,
 } from "@azure/msal-browser";
+import { Configuration, OpenAIApi } from "openai";
+import { ref } from "vue";
+
+const testTabs = ref(null);
 
 export default {
   name: "App",
@@ -229,6 +247,8 @@ export default {
       msalInstance: null,
       isMsalInitialized: false,
       account: null,
+      fetchingOpenAi: false,
+      summarizedContent: "",
       accountData: null,
       eventDay: null,
       eventStartTime: null,
@@ -283,6 +303,48 @@ export default {
       } catch (error) {
         console.error("MSAL initialization error:", error);
       }
+    },
+    async summarizeContent() {
+      this.summarizedContent = await this.getSelectedText();
+    },
+    async getSelectedText() {
+      this.fetchingOpenAi = true;
+      return new window.Office.Promise(
+        function (resolve, reject) {
+          try {
+            window.Office.context.mailbox.item.body.getAsync(
+              window.Office.CoercionType.Text,
+              async function (asyncResult) {
+                const configuration = new Configuration({
+                  apiKey: process.env.VUE_APP_OPENAI_KEY,
+                });
+                const openAI = new OpenAIApi(configuration);
+                const response = await openAI.createChatCompletion({
+                  model: "gpt-3.5-turbo",
+                  messages: [
+                    {
+                      role: "system",
+                      content:
+                        "You are a helpful assistant that can help users to better manage emails. The following prompt contains the whole mail thread. ",
+                    },
+                    {
+                      role: "user",
+                      content:
+                        "Summarize the following mail thread and extract the key points: " +
+                        asyncResult.value,
+                    },
+                  ],
+                });
+
+                resolve(response.data.choices[0].message.content);
+                this.fetchingOpenAi = false;
+              }.bind(this)
+            );
+          } catch (error) {
+            reject(error);
+          }
+        }.bind(this)
+      );
     },
     async signIn() {
       if (!this.isMsalInitialized) {
@@ -682,6 +744,8 @@ export default {
       this.error = null;
       this.fetching = false;
       this.emailItem = null;
+      this.fetchingOpenAi = false;
+      this.summarizedContent = "";
     },
   },
 };
@@ -767,10 +831,12 @@ export default {
   margin-top: 10px;
   text-align: center;
 }
+
 .email-body {
   width: 100%;
   overflow: auto;
 }
+
 .title {
   margin: 0 0 5px;
 }
@@ -833,6 +899,7 @@ export default {
   border: 2px solid #ffffff;
   border-radius: 50%;
 }
+
 .tabs-component-tabs {
   display: block;
   padding: 0;
@@ -842,6 +909,7 @@ export default {
   list-style-type: none;
   margin-bottom: 20px;
 }
+
 .tabs-component-tab-a {
   display: block;
   text-align: center;
@@ -854,25 +922,31 @@ export default {
   font-weight: 500;
   text-decoration: none;
 }
+
 .tabs-component-tab-a:hover {
   background: var(--primary-color);
   color: var(--secondary-color);
 }
+
 .tabs-component-tab-a.is-active {
   background: var(--primary-color);
   color: var(--secondary-color);
 }
+
 .tabs-component-tab:first-child {
   opacity: 0;
   height: 0;
   width: 0;
   margin: 0;
 }
+
 .tabs-component-panel {
 }
+
 #email-content-pane {
   position: static;
 }
+
 .panel-inner {
   background: white;
   margin: 20px;
@@ -887,21 +961,25 @@ export default {
   box-shadow: rgba(50, 50, 93, 0.25) 0px 50px 100px -20px,
     rgba(0, 0, 0, 0.3) 0px 30px 60px -30px;
 }
+
 .panel-inner-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   position: relative;
 }
+
 .panel-inner-header h4 {
   margin-top: 0;
 }
+
 .action-buttons-wrapper {
   display: flex;
   gap: 10px;
   justify-content: center;
   align-items: center;
 }
+
 .action-buttons {
   height: 35px;
   width: 35px;
@@ -913,14 +991,17 @@ export default {
   border-radius: 50%;
   background-color: white;
 }
+
 .action-buttons svg {
   height: 20px;
   width: 20px;
   fill: var(--primary-color);
 }
+
 .action-buttons:hover svg {
   fill: var(--secondary-color);
 }
+
 .backdrop {
   position: fixed;
   left: 0;
@@ -929,6 +1010,7 @@ export default {
   right: 0;
   background-color: rgba(255, 255, 255, 0.746);
 }
+
 .blurred {
   filter: blur(5px);
 }
@@ -940,6 +1022,7 @@ textarea {
   display: block;
   width: 100%;
 }
+
 label {
   font-size: 12px;
   margin-bottom: 5px;
@@ -948,6 +1031,7 @@ label {
   font-weight: 600;
   color: #888888;
 }
+
 .close-button {
   appearance: none;
   border: 0;
@@ -958,7 +1042,12 @@ label {
   top: -10px;
   cursor: pointer;
 }
+
 .close-button:hover {
   color: var(--primary-color);
+}
+
+.summarizedContent {
+  white-space: pre-wrap;
 }
 </style>
