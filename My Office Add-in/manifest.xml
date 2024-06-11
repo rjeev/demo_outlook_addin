@@ -7,32 +7,19 @@
           xsi:type="MailApp">
 
   <!-- Begin Basic Settings: Add-in metadata, used for all versions of Office unless override provided. -->
-
-  <!-- IMPORTANT! Id must be unique for your add-in, if you reuse this manifest ensure that you change this id to a new GUID. -->
   <Id>9c209878-6125-4d1d-ac52-932e580e9061</Id>
-
-  <!--Version. Updates from the store only get triggered if there is a version change. -->
   <Version>1.0.0.0</Version>
   <ProviderName>[Provider name]</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
-  <!-- The display name of your add-in. Used on the store and various places of the Office UI such as the add-ins dialog. -->
   <DisplayName DefaultValue="LF Demo Add-in" />
   <Description DefaultValue="Displays email properties"/>
-
-  <!-- Icon for your add-in. Used on installation screens and the add-ins dialog. -->
   <IconUrl DefaultValue="https://localhost:3000/assets/icon-64.png" />
   <HighResolutionIconUrl DefaultValue="https://localhost:3000/assets/icon-128.png"/>
-
-  <!--If you plan to submit this add-in to the Office Store, uncomment the SupportUrl element below-->
-  <!-- <SupportUrl DefaultValue="[Insert the URL of a page that provides support information for the app]" /> -->
-
-  <!-- Domains that will be allowed when navigating. For example, if you use ShowTaskpane and then have an href link, navigation will only be allowed if the domain is on this list. -->
   <AppDomains>
     <AppDomain>AppDomain1</AppDomain>
     <AppDomain>AppDomain2</AppDomain>
     <AppDomain>AppDomain3</AppDomain>
   </AppDomains>
-  <!--End Basic Settings. -->
 
   <Hosts>
     <Host Name="Mailbox" />
@@ -65,19 +52,14 @@
     </Requirements>
     <Hosts>
       <Host xsi:type="MailHost">
-
         <DesktopFormFactor>
-          <!-- Location of the Functions that UI-less buttons can trigger (ExecuteFunction Actions). -->
           <FunctionFile resid="Commands.Url" />
 
           <!-- Message Read -->
           <ExtensionPoint xsi:type="MessageReadCommandSurface">
-            <!-- Use the default tab of the ExtensionPoint or create your own with <CustomTab id="myTab"> -->
             <OfficeTab id="TabDefault">
-              <!-- Up to 6 Groups added per Tab -->
               <Group id="msgReadGroup">
                 <Label resid="GroupLabel" />
-                <!-- Launch the add-in : task pane button -->
                 <Control xsi:type="Button" id="msgReadOpenPaneButton">
                   <Label resid="TaskpaneButton.Label" />
                   <Supertip>
@@ -93,16 +75,16 @@
                     <SourceLocation resid="Taskpane.Url" />
                   </Action>
                 </Control>
-                <!-- Go to http://aka.ms/ButtonCommands to learn how to add more Controls: ExecuteFunction and Menu -->
               </Group>
             </OfficeTab>
           </ExtensionPoint>
 
+          <!-- Appointment Organizer -->
           <ExtensionPoint xsi:type="AppointmentOrganizerCommandSurface">
             <OfficeTab id="TabDefault">
-              <Group id="msgReadGroup1">
+              <Group id="apptOrgGroup">
                 <Label resid="GroupLabel" />
-                <Control xsi:type="Button" id="msgReadOpenPaneButton1">
+                <Control xsi:type="Button" id="apptOrgOpenPaneButton">
                   <Label resid="TaskpaneButton.Label" />
                   <Supertip>
                     <Title resid="TaskpaneButton.Label" />
@@ -120,7 +102,33 @@
               </Group>
             </OfficeTab>
           </ExtensionPoint>
-        </DesktopFormFactor> </Host>
+
+          <!-- Appointment Attendee -->
+          <ExtensionPoint xsi:type="AppointmentAttendeeCommandSurface">
+            <OfficeTab id="TabDefault">
+              <Group id="apptAttendeeGroup">
+                <Label resid="GroupLabel" />
+                <Control xsi:type="Button" id="apptAttendeeOpenPaneButton">
+                  <Label resid="TaskpaneButton.Label" />
+                  <Supertip>
+                    <Title resid="TaskpaneButton.Label" />
+                    <Description resid="TaskpaneButton.Tooltip" />
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="Icon.16x16" />
+                    <bt:Image size="32" resid="Icon.32x32" />
+                    <bt:Image size="80" resid="Icon.80x80" />
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <SourceLocation resid="Taskpane.Url" />
+                  </Action>
+                </Control>
+              </Group>
+            </OfficeTab>
+          </ExtensionPoint>
+
+        </DesktopFormFactor>
+      </Host>
     </Hosts>
 
     <Resources>
@@ -132,7 +140,6 @@
       <bt:Urls>
         <bt:Url id="Commands.Url" DefaultValue="https://localhost:3000/commands.html" />
         <bt:Url id="Taskpane.Url" DefaultValue="https://localhost:3000/index.html" />
-
       </bt:Urls>
       <bt:ShortStrings>
         <bt:String id="GroupLabel" DefaultValue="LF Demo Add-in"/>

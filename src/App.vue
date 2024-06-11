@@ -120,6 +120,10 @@
         <div class="email-content" :class="{ blurred: createMode !== '' }">
           <h2>Email</h2>
           <div>
+            <p class="title"><b>Email Type:</b></p>
+            {{ getMessageClassDescription(itemClass) || itemClass }}
+          </div>
+          <div>
             <p class="title"><b>Subject:</b></p>
             {{ subject }}
           </div>
@@ -221,13 +225,10 @@ import {
   InteractionRequiredAuthError,
 } from "@azure/msal-browser";
 import { Configuration, OpenAIApi } from "openai";
-import { ref } from "vue";
-
-const testTabs = ref(null);
+import { messageClasses } from "@/constants";
 
 export default {
   name: "App",
-
   data() {
     return {
       isLoaded: false,
@@ -259,6 +260,13 @@ export default {
       appointmentTitle: "",
       createMode: "",
       totalEmails: null,
+      outlookItemId: "",
+      typeOfEvent: "",
+      from: [],
+      to: [],
+      itemClass: [],
+      itemId: "",
+      allEmails: [],
     };
   },
   created() {
@@ -267,6 +275,9 @@ export default {
     this.fetchTotalEmails();
   },
   methods: {
+    getMessageClassDescription(key) {
+      return messageClasses[key] || false;
+    },
     async initializeMsal() {
       try {
         const msalConfig = {
@@ -386,7 +397,6 @@ export default {
           .acquireTokenSilent(request)
           .then((tokenResponse) => {
             // Do something with the tokenResponse
-            console.log(tokenResponse, "tokenResponse");
             this.accessToken = tokenResponse.accessToken;
           })
           .catch(async (error) => {
@@ -444,7 +454,6 @@ export default {
         });
 
         if (response.ok) {
-          console.log("Email sent successfully.");
           this.createMode = "";
           this.$toast.success("Email sent succesfully.");
         } else {
@@ -554,13 +563,25 @@ export default {
       this.fetching = true;
       try {
         const item = window.Office.context.mailbox.item;
+        console.log(item);
+        this.outlookItemId = item.itemId;
         this.emailItem = item;
         this.subject = item.subject;
-        this.senderEmail = item.from.emailAddress;
-        this.senderName = item.from.displayName;
+        this.senderEmail =
+          item.itemType == "appointment"
+            ? item.organizer.emailAddress
+            : item.from.emailAddress;
+        this.senderName =
+          item.itemType == "appointment"
+            ? item.organizer.displayName
+            : item.from.displayName;
         this.ccRecipients = item.cc || [];
         this.bccRecipients = item.bcc || [];
-
+        this.from = item.from || [];
+        this.to = item.to || [];
+        this.itemClass =
+          item.itemType == "appointment" ? item.itemType : item.itemClass;
+        this.itemId = item.itemId;
         await this.fetchAttachments(item.attachments);
         await this.fetchEmailBody();
       } catch (error) {
@@ -659,8 +680,11 @@ export default {
           (recipient) => recipient.emailAddress
         ),
         body: this.body,
+        itemId: this.itemId,
+        itemClass: this.itemClass,
       };
 
+      console.log(emailData, "emailData");
       fetch("http://localhost:3009/emails", {
         method: "POST",
         headers: {
@@ -673,6 +697,7 @@ export default {
             console.log("Email data successfully logged.");
             this.$toast.success("Email data successfully logged.");
             this.fetchTotalEmails();
+            this.fetchAllEmails();
             // this.resetState();
           } else {
             throw new Error("Failed to log email data.");
@@ -680,7 +705,11 @@ export default {
         })
         .catch((error) => {
           console.error("Error logging email data:", error);
-          this.$toast.error("Error logging email data:", error);
+          if (error.message.includes("Failed to log email data")) {
+            this.$toast.error("Email with this itemId already exists.");
+          } else {
+            this.$toast.error("An error occurred. Please try again.");
+          }
         });
     },
     async fetchPersonalData(email) {
@@ -725,6 +754,19 @@ export default {
         }
         const data = await response.json();
         this.totalEmails = data.totalRecords;
+      } catch (error) {
+        console.error("Error fetching total number of emails:", error);
+        // Handle the error as per your application's requirements
+      }
+    },
+    async fetchAllEmails() {
+      try {
+        const response = await fetch("http://localhost:3009/emails");
+        if (!response.ok) {
+          throw new Error("Failed to fetch total number of emails.");
+        }
+        const data = await response.json();
+        this.allEmails = data;
       } catch (error) {
         console.error("Error fetching total number of emails:", error);
         // Handle the error as per your application's requirements
@@ -940,8 +982,8 @@ export default {
   margin: 0;
 }
 
-.tabs-component-panel {
-}
+/* .tabs-component-panel {
+} */
 
 #email-content-pane {
   position: static;
