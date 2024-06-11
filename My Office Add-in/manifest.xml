@@ -97,9 +97,30 @@
               </Group>
             </OfficeTab>
           </ExtensionPoint>
-          <!-- Go to http://aka.ms/ExtensionPointsCommands to learn how to add more Extension Points: MessageRead, AppointmentOrganizer, AppointmentAttendee -->
-        </DesktopFormFactor>
-      </Host>
+
+          <ExtensionPoint xsi:type="AppointmentOrganizerCommandSurface">
+            <OfficeTab id="TabDefault">
+              <Group id="msgReadGroup1">
+                <Label resid="GroupLabel" />
+                <Control xsi:type="Button" id="msgReadOpenPaneButton1">
+                  <Label resid="TaskpaneButton.Label" />
+                  <Supertip>
+                    <Title resid="TaskpaneButton.Label" />
+                    <Description resid="TaskpaneButton.Tooltip" />
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="Icon.16x16" />
+                    <bt:Image size="32" resid="Icon.32x32" />
+                    <bt:Image size="80" resid="Icon.80x80" />
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <SourceLocation resid="Taskpane.Url" />
+                  </Action>
+                </Control>
+              </Group>
+            </OfficeTab>
+          </ExtensionPoint>
+        </DesktopFormFactor> </Host>
     </Hosts>
 
     <Resources>
@@ -116,9 +137,12 @@
       <bt:ShortStrings>
         <bt:String id="GroupLabel" DefaultValue="LF Demo Add-in"/>
         <bt:String id="TaskpaneButton.Label" DefaultValue="Show Taskpane"/>
+        <bt:String id="residDescription" DefaultValue="Show Taskpane"/>
+        <bt:String id="residLabel" DefaultValue="Default Label"/>
       </bt:ShortStrings>
       <bt:LongStrings>
         <bt:String id="TaskpaneButton.Tooltip" DefaultValue="Opens a pane displaying all available properties."/>
+        <bt:String id="residTooltip" DefaultValue="Opens a pane displaying all available properties."/>
       </bt:LongStrings>
     </Resources>
   </VersionOverrides>
