@@ -9,7 +9,7 @@
   <!-- Begin Basic Settings: Add-in metadata, used for all versions of Office unless override provided. -->
   <Id>9c209878-6125-4d1d-ac52-932e580e9061</Id>
   <Version>1.0.0.0</Version>
-  <ProviderName>[Provider name]</ProviderName>
+  <ProviderName>Leapfrog Technology</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="LF Demo Add-in" />
   <Description DefaultValue="Displays email properties"/>
@@ -21,14 +21,18 @@
     <AppDomain>AppDomain3</AppDomain>
   </AppDomains>
 
+  <!-- Where the addin works -->
   <Hosts>
     <Host Name="Mailbox" />
   </Hosts>
   <Requirements>
     <Sets>
+    <!-- The add-in needs at least version 1.1 of the Mailbox to work -->
       <Set Name="Mailbox" MinVersion="1.1" />
     </Sets>
   </Requirements>
+
+  <!-- When we opedn addin webpage defined in source location pops up with min height requested as defined -->
   <FormSettings>
     <Form xsi:type="ItemRead">
       <DesktopSettings>
@@ -38,6 +42,7 @@
     </Form>
   </FormSettings>
 
+  <!-- The addin can read and write infomation in emails -->
   <Permissions>ReadWriteItem</Permissions>
   <Rule xsi:type="RuleCollection" Mode="Or">
     <Rule xsi:type="ItemIs" ItemType="Message" FormType="Read" />
@@ -79,13 +84,19 @@
             </OfficeTab>
           </ExtensionPoint>
 
-          <!-- Appointment Organizer -->
+          <!-- Appointment Organizer  -->
+          <!-- Specify settings for the appointment organiser command surface  -->
           <ExtensionPoint xsi:type="AppointmentOrganizerCommandSurface">
+          <!-- Places the add-in UI elements in the default tab -->
             <OfficeTab id="TabDefault">
+            <!-- Defines a group of controls for the appointment organizer -->
               <Group id="apptOrgGroup">
                 <Label resid="GroupLabel" />
+                <!-- Adds a button to the group -->
                 <Control xsi:type="Button" id="apptOrgOpenPaneButton">
+                  <!-- Text for the button -->
                   <Label resid="TaskpaneButton.Label" />
+                  <!-- Tooltip that appears when we hover over addin button  -->
                   <Supertip>
                     <Title resid="TaskpaneButton.Label" />
                     <Description resid="TaskpaneButton.Tooltip" />
@@ -95,7 +106,9 @@
                     <bt:Image size="32" resid="Icon.32x32" />
                     <bt:Image size="80" resid="Icon.80x80" />
                   </Icon>
+                  <!-- Action to take when the button is clicked (showing a task pane) -->
                   <Action xsi:type="ShowTaskpane">
+                    <!-- URL of the task pane content -->
                     <SourceLocation resid="Taskpane.Url" />
                   </Action>
                 </Control>
